@@ -131,7 +131,7 @@ hats/YYYYMMDD-title/
 ```
 
 - run-id 只用本地日期+时间：`YYYYMMDD-HHMMSS`。
-- `summary.md`：中文人类可读报告，必须包含 `# HUMAN MANUAL`。
+- `summary.md`：中文人类可读报告，必须包含 `# HUMAN MANUAL`；如果报告引用截图等图片 artifacts，必须使用 Markdown 图片语法 `![描述](artifacts/xxx.png)` 呈现，方便直接预览，不只写纯路径或普通链接。
 - `results.json`：机器可读结果，不含 secrets，不塞巨大 stdout/stderr。
 - `logs.md`：执行过程、命令、时间、stdout/stderr 摘要、工具错误。
 - `artifacts/`：截图、API 响应、DB 输出、临时执行脚本、浏览器动作记录等。

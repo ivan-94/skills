@@ -52,6 +52,7 @@ HAT 是 TDD 之后、人工验收之前的准备技能。它验证“用户视�
    - 目录名为 `hats/YYYYMMDD-{slug}`。slug 来自 PRD/Issue/PR 标题、用户任务名或 `hat-{number}`；中文可保留，空格和标点转 `-`，重复则加 `-2`。
    - 同源 PRD/Issue/PR 默认更新已有 HAT；用户明确要求快照时才新建。
    - 更新 `guide.md` 时保留人工填写区；可覆盖自动生成区。
+   - 对 browser 验收场景，在 agent notes 中写明：如果当前页面支持 `window.__hat`，先通过 `window.__hat.discover()` 发现能力，并优先使用 `window.__hat.invoke(...)` / `waitForIdle()` / `inspect(...)` 完成可解释的业务动作；没有相关 HAT 能力时再回退到可访问性 selector、`data-testid`、CSS selector 或人工确认。
 
 5. **生成 `prepare.sh`**
    - 脚本必须幂等、`set -euo pipefail`、支持 `prepare` / `cleanup` / `info`。
@@ -77,7 +78,7 @@ HAT 是 TDD 之后、人工验收之前的准备技能。它验证“用户视�
 - 验收数据需求：seed 数据、历史数据样本、外部服务 sandbox、cleanup 策略。
 - 数据迁移检查：当前/目标 schema version、旧数据样本、回滚/cleanup 注意事项、未执行项或风险。
 - 验收清单：按 P0/P1/P2 分级，每个场景包含 Preconditions、Steps、Expected、Evidence、Notes。
-- 验收执行方式：入口、主要工具、辅助工具、agent notes、必须人工判断的步骤。
+- 验收执行方式：入口、主要工具、辅助工具、agent notes、必须人工判断的步骤。browser 验收模式下，如果支持 `window.__hat`，优先调用 `discover()` / `invoke()` / `waitForIdle()` / `inspect()`；没有可用 HAT 能力时再写明回退方式。
 - 通过标准：所有 P0 通过；P1 无阻塞发布问题；P2 探索性；迁移无未解释异常；cleanup 策略明确。
 - 执行记录模板：时间、执行人、场景、结果、证据、备注。
 

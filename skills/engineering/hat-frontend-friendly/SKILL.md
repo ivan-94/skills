@@ -84,7 +84,7 @@ description: 为前端项目设计并实现 HAT-friendly 控制面 `window.__hat
    - JavaScript 项目用 JSDoc 描述协议，不为了类型改构建链。
 
 5. **写文档**
-   - `HAT.md`：给验收 agent 用，写当前项目如何启用、如何调用、已注册 scopes/actions、已知限制。
+   - `HAT.md`：给验收 agent 用，写通用发现、调用、等待、检查和回退策略；不要维护具体 scope/action 清单，具体能力以运行时 `discover()` 为准。
    - `docs/frontend-hat-friendly-guide.md`：给后续 coding agent/开发者用，写本项目如何新增 scope/action 的教程和最佳实践。
    - `AGENTS.md` 和 `CLAUDE.md`：已存在则追加/更新短入口；不存在则创建最小文件。内容只提醒“涉及前端页面/组件时考虑 HAT 适配性”，并指向 `docs/frontend-hat-friendly-guide.md`。
 
@@ -105,7 +105,7 @@ description: 为前端项目设计并实现 HAT-friendly 控制面 `window.__hat
 - HAT action 表达用户意图和业务状态，不重新包装点击路径。
 - 复杂 UI 组件只是到达业务状态的中间手段时，优先暴露业务动作稳定到达状态。
 - 如果场景目标本身是验证组件真实交互，不能用 HAT state/action 替代真实用户路径；在 HAT 执行中应保留 manual/browser 验证。
-- URL/query、seed、storage、API、项目状态管理可以作为业务状态到达策略，但必须写入 `HAT.md` 或 guide，让 agent 可解释、可回放。
+- URL/query、seed、storage、API、项目状态管理可以作为业务状态到达策略；通用原则写入 `HAT.md`，具体页面接入教程写入 `docs/frontend-hat-friendly-guide.md`，让 agent 可解释、可回放。
 
 ## Validation
 
@@ -124,7 +124,7 @@ description: 为前端项目设计并实现 HAT-friendly 控制面 `window.__hat
 
 - 新增/修改文件。
 - `window.__hat` 启用条件。
-- 已注册 scope/action。
+- 首个 scope/action 接入摘要，以及这些具体能力是否只通过 `discover()` 暴露。
 - `HAT.md`、`docs/frontend-hat-friendly-guide.md`、`AGENTS.md`、`CLAUDE.md` 状态。
 - 验证命令和结果。
 - 未完成或需要后续接入的范围。

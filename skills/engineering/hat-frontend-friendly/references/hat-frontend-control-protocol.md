@@ -507,10 +507,12 @@ if (typeof window !== "undefined" && enableHat) {
 - 当前项目是否启用 `window.__hat`。
 - 启用环境变量。
 - Agent 调用优先级。
-- 已注册 scopes/actions 摘要。
-- 示例调用。
-- `waitForIdle` / `inspect` 用法。
-- 已知限制和未接入页面。
+- 如何调用 `discover()` 发现当前页面真实可用能力。
+- 如何根据 `discover()` 结果选择 `invoke(scopeId, actionName, input)`。
+- 每次关键 action 后如何使用 `waitForIdle()`。
+- 如何使用 `inspect(scopeId)` 判断状态。
+- 当没有可用 HAT scope/action 时，如何回退到可访问性 selector、`data-testid`、CSS selector、API/seed/manual 等方式。
+- 不维护具体 scope/action 清单；具体能力以运行时 `discover()` 为准，避免文档过期。
 
 `docs/frontend-hat-friendly-guide.md` 写给 coding agent/开发者：
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deliver Issue"
+  short_description: "Implement issues to HAT-ready PRs"
+  default_prompt: "Deliver the GitHub issue through TDD, cross-review, HAT preparation, commit, and a Draft PR labeled HAT-Ready. Do not run HAT."

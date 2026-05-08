@@ -523,6 +523,7 @@ if (typeof window !== "undefined" && enableHat) {
 - 生命周期注册/注销。
 - `waitForIdle` / `inspect` 约定。
 - 复杂组件原则。
+- 前端代码实现的 Agent E2E 通用最佳实践。比如关键链路、失败、错误需要有日志输出
 - 示例来自当前项目真实接入页面。
 
 `AGENTS.md` 和 `CLAUDE.md` 放短入口：

@@ -1,6 +1,6 @@
 ---
 name: cross-review
-description: Run a real read-only cross-agent code review by invoking the opposite CLI: Codex calls Claude Code, Claude Code calls Codex. Use when the user asks for cross review, 交叉 review, Claude/Codex mutual review, or an independent agent review with P0/P1/P2 findings.
+description: "Run a real read-only cross-agent code review by invoking the opposite CLI: Codex calls Claude Code, Claude Code calls Codex. Use when the user asks for cross review, 交叉 review, Claude/Codex mutual review, or an independent agent review with P0/P1/P2 findings."
 ---
 
 # Cross Review

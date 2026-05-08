@@ -164,6 +164,7 @@ Skills I use daily for code work.
 - **[cross-review](./skills/engineering/cross-review/SKILL.md)** — Invoke the opposite CLI for a read-only independent code review: Codex calls Claude Code, Claude Code calls Codex, with P0/P1/P2 findings and no P3 noise.
 - **[deliver-issue](./skills/engineering/deliver-issue/SKILL.md)** — Deliver GitHub issues through TDD, cross-review, HAT preparation, and a Draft PR labeled `HAT-Ready`.
 - **[diagnosing-bugs](./skills/engineering/diagnosing-bugs/SKILL.md)** — Disciplined diagnosis loop for hard bugs and performance regressions: reproduce → minimise → hypothesise → instrument → fix → regression-test.
+- **[hat-dispatch](./skills/engineering/hat-dispatch/SKILL.md)** — Dispatch HAT runs for GitHub PRs labeled `HAT-Ready`, using isolated sub-agents and PR label/comment writeback.
 - **[hat-prepare](./skills/engineering/hat-prepare/SKILL.md)** — Prepare HAT (hand acceptance testing) after TDD by generating an environment guide, acceptance checklist, data needs, and an idempotent `prepare.sh`.
 - **[hat-run](./skills/engineering/hat-run/SKILL.md)** — Run an existing HAT guide by checking the prepared environment, executing automatable acceptance steps, and writing reports with evidence.
 - **[hat-frontend-friendly](./skills/engineering/hat-frontend-friendly/SKILL.md)** — Add a `window.__hat` frontend control surface so HAT/browser agents can use discoverable business actions instead of brittle component DOM clicks.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "HAT Dispatch"
+  short_description: "Run HAT for HAT-Ready PRs"
+  default_prompt: "Scan GitHub PRs labeled HAT-Ready, dispatch isolated sub-agents to run HAT, then comment results and update HAT labels."

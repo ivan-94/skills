@@ -162,6 +162,7 @@ Skills I use daily for code work.
 
 - **[diagnosing-bugs](./skills/engineering/diagnosing-bugs/SKILL.md)** — Disciplined diagnosis loop for hard bugs and performance regressions: reproduce → minimise → hypothesise → instrument → fix → regression-test.
 - **[hat-prepare](./skills/engineering/hat-prepare/SKILL.md)** — Prepare HAT (hand acceptance testing) after TDD by generating an environment guide, acceptance checklist, data needs, and an idempotent `prepare.sh`.
+- **[hat-run](./skills/engineering/hat-run/SKILL.md)** — Run an existing HAT guide by checking the prepared environment, executing automatable acceptance steps, and writing reports with evidence.
 - **[tdd](./skills/engineering/tdd/SKILL.md)** — Test-driven development with a red-green-refactor loop. Builds features or fixes bugs one vertical slice at a time.
 - **[domain-modeling](./skills/engineering/domain-modeling/SKILL.md)** — Actively build and sharpen a project's domain model — challenge terms against the glossary, stress-test with edge-case scenarios, and update `CONTEXT.md` and ADRs inline.
 - **[codebase-design](./skills/engineering/codebase-design/SKILL.md)** — Shared discipline and vocabulary for designing deep modules: a lot of behaviour behind a small interface, placed at a clean seam, testable through that interface.

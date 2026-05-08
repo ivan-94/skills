@@ -28,10 +28,11 @@ HAT 是 TDD 之后、人工验收之前的准备技能。它验证“用户视�
 
 1. **Discovery**
    - 读取用户给的 PRD/Issue/PR/inline 描述。若给 GitHub/Linear 编号或链接且工具可用，自动读取；写回评论必须用户明确要求。
-   - 探索项目约定：`README`、`AGENTS.md`/`CLAUDE.md`、`CONTEXT.md`、`docs/agents`、已有 `hats/`。
+   - 探索项目约定：`README`、`AGENTS.md`/`CLAUDE.md`、`CONTEXT.md`、`docs/agents`、repo root `HAT.md`（如果存在）、已有 `hats/`。
    - 搜索运行和数据入口：`package.json`、`docker-compose*`、`Makefile`、`.env.example`、migration 目录、seed 脚本、测试命令。
    - 如果是 PR/diff，重点看 schema/migration、auth/permission、用户入口、后台任务、webhook/payment/email、数据破坏性变化。
    - 读取 TDD 后新增/修改的测试作为参考，但不要把自动化测试照抄成 HAT 清单。
+   - `HAT.md` 是项目级 HAT 策略和通用记忆层；有就静默读取并用于 guide/prepare 设计，没有就忽略，不提示、不创建、不更新。
 
 2. **先给 Discovery 摘要，再盘问**
    - 输出 Source、Implementation status、Related tests。

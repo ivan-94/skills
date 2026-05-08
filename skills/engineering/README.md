@@ -21,6 +21,7 @@ Model- or user-reachable (rich trigger phrasing so the model can reach for them)
 
 - **[diagnosing-bugs](./diagnosing-bugs/SKILL.md)** — Disciplined diagnosis loop for hard bugs and performance regressions: reproduce → minimise → hypothesise → instrument → fix → regression-test.
 - **[hat-prepare](./hat-prepare/SKILL.md)** — Prepare HAT (hand acceptance testing) after TDD by generating an environment guide, acceptance checklist, data needs, and an idempotent `prepare.sh`.
+- **[hat-run](./hat-run/SKILL.md)** — Run an existing HAT guide by checking the prepared environment, executing automatable acceptance steps, and writing reports with evidence.
 - **[tdd](./tdd/SKILL.md)** — Test-driven development with a red-green-refactor loop. Builds features or fixes bugs one vertical slice at a time.
 - **[domain-modeling](./domain-modeling/SKILL.md)** — Actively build and sharpen a project's domain model — challenge terms, stress-test with scenarios, update `CONTEXT.md` and ADRs inline.
 - **[codebase-design](./codebase-design/SKILL.md)** — Shared discipline and vocabulary for designing deep modules: small interfaces, clean seams, testable through the interface.

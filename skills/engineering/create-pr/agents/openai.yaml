@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create PR"
+  short_description: "Create human PRs from tests and HAT"
+  default_prompt: "Create or update a GitHub PR from the current implementation, including issue closing linkage, TDD/test summary, existing HAT results, and a human-facing reviewer report."

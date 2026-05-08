@@ -160,6 +160,7 @@ Skills I use daily for code work.
 
 **Model-invoked**
 
+- **[create-pr](./skills/engineering/create-pr/SKILL.md)** — Create or update a GitHub PR with issue linkage, TDD/test evidence, existing HAT results, and reviewer-facing delivery notes.
 - **[diagnosing-bugs](./skills/engineering/diagnosing-bugs/SKILL.md)** — Disciplined diagnosis loop for hard bugs and performance regressions: reproduce → minimise → hypothesise → instrument → fix → regression-test.
 - **[hat-prepare](./skills/engineering/hat-prepare/SKILL.md)** — Prepare HAT (hand acceptance testing) after TDD by generating an environment guide, acceptance checklist, data needs, and an idempotent `prepare.sh`.
 - **[hat-run](./skills/engineering/hat-run/SKILL.md)** — Run an existing HAT guide by checking the prepared environment, executing automatable acceptance steps, and writing reports with evidence.

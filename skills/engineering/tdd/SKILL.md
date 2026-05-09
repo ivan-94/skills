@@ -48,6 +48,7 @@ When exploring the codebase, read `CONTEXT.md` (if it exists) so that test names
 
 Before writing any code:
 
+- [ ] If the task is based on an issue, read the full issue first. If that issue explicitly references a parent issue, parent PRD, `## Parent`, `Parent PRD`, `Source Manifest`, or linked spec, read that parent/source before planning. If the explicit parent/source cannot be read, stop and ask the user for access or the missing source.
 - [ ] Confirm with user what interface changes are needed
 - [ ] Confirm with user which behaviors to test (prioritize)
 - [ ] Identify opportunities for deep modules (small interface, deep implementation) — run the `/codebase-design` skill for the vocabulary and the testability checks

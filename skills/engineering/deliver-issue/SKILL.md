@@ -44,6 +44,7 @@ Gather facts before changing code:
 - Current branch, upstream, base branch, commits versus base, and `git status --short`.
 - GitHub remote, `gh auth status`, repo identity, and whether an open PR already exists for the current branch.
 - Issue content for every provided GitHub issue with `gh issue view <number> --comments`.
+- Parent issue or parent PRD references explicitly named by the issue body or comments, such as `## Parent`, `Parent issue`, `Parent PRD`, `Source Manifest`, or a linked PRD/spec. Read those parents before planning implementation. If an explicit parent reference cannot be read, stop and ask the user for access or the missing source.
 - Issue test plan. If any issue lacks a clear test plan, stop and ask the user to add or provide one.
 - Acceptance criteria. If unclear, `/hat-prepare` may later draft a checklist, but `/hat-run` is out of scope.
 - Existing relevant tests, scripts, package commands, docs, `AGENTS.md` / `CLAUDE.md`, `HAT.md`, and prior `hats/` entries.

@@ -1,35 +1,36 @@
 # Agent Board
 
-Local GitHub workflow board for launching Codex or Claude Code tasks from Issue and PR lanes.
+Local macOS GitHub workflow board for launching Codex or Claude Code tasks from Issue and PR lanes.
 
 ## Run
 
-Install Bun first, then:
+Build and run the SwiftUI macOS app:
 
 ```bash
 cd apps/agent-board
-bun install
-bun run dev
+swift run AgentBoard
 ```
 
-Options:
+If `bin/agent-board` is linked into your PATH:
 
 ```bash
-bun run src/cli/index.ts --no-open
-bun run src/cli/index.ts --port=4180
+agent-board
 ```
 
 ## v1 Scope
 
-- Detect the first GitHub remote in the current Git repository.
-- Render separate Issue and Pull Request boards.
-- Use the built-in Agent Board workflow when `.agent-board.yml` is absent.
-- Show missing labels without creating them automatically.
+- Manage multiple local workspaces from a native macOS app.
+- Render separate Issue and Pull Request boards with configurable lanes.
+- Store app state under `~/.agent-board`.
 - Render prompts from selected cards.
 - Launch Codex, Claude Code, or a custom runner in a local terminal session.
 
-Run history is written under:
+Configuration is written under:
 
 ```text
-~/.agent-board/runs/<owner__repo>/
+~/.agent-board/config.json
+~/.agent-board/workspaces/<workspace-id>/workflow.json
+~/.agent-board/runs/<workspace-id>/
 ```
+
+The SwiftUI interface uses standard macOS navigation, lists, forms, menus, toolbars, and sheets. Custom board surfaces apply Liquid Glass through `glassEffect` on macOS 26+ and fall back to system materials on older macOS releases.

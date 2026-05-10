@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SOURCE="${BASH_SOURCE[0]}"
+TARGET_CWD="$(pwd)"
+while [ -L "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  TARGET="$(readlink "$SOURCE")"
+  if [[ "$TARGET" == /* ]]; then
+    SOURCE="$TARGET"
+  else
+    SOURCE="$DIR/$TARGET"
+  fi
+done
+
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+ENTRY="$APP_DIR/src/cli/index.ts"
+
+cd "$APP_DIR"
+
+if [ ! -d "$APP_DIR/node_modules/yaml" ]; then
+  if command -v bun >/dev/null 2>&1; then
+    bun install
+  else
+    npx --yes bun@latest install
+  fi
+fi
+
+if command -v bun >/dev/null 2>&1; then
+  exec env AGENT_BOARD_TARGET_CWD="$TARGET_CWD" bun run "$ENTRY" "$@"
+fi
+
+exec env AGENT_BOARD_TARGET_CWD="$TARGET_CWD" npx --yes bun@latest run "$ENTRY" "$@"

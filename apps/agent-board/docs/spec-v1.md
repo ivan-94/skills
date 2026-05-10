@@ -105,7 +105,7 @@ Users can edit runner command, arguments, permission mode arguments, and termina
 ## Acceptance Criteria
 
 - `swift build` succeeds from `apps/agent-board`.
-- `bin/agent-board` launches the SwiftUI app through SwiftPM.
+- `bin/agent-board` builds the SwiftPM executable, wraps it in a local `.app` bundle, and launches it through macOS `open`.
 - The app can add a GitHub-backed local workspace.
 - The app fetches Issues and PRs with `gh`.
 - The board renders native macOS lanes and cards.

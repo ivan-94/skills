@@ -4,11 +4,11 @@ Local macOS GitHub workflow board for launching Codex or Claude Code tasks from 
 
 ## Run
 
-Build and run the SwiftUI macOS app:
+Build and launch the SwiftUI macOS app bundle:
 
 ```bash
 cd apps/agent-board
-swift run AgentBoard
+bin/agent-board
 ```
 
 If `bin/agent-board` is linked into your PATH:

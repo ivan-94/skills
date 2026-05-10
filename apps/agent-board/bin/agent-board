@@ -14,6 +14,49 @@ done
 
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+APP_BUNDLE="$APP_DIR/.build/AgentBoard.app"
+CONTENTS_DIR="$APP_BUNDLE/Contents"
+MACOS_DIR="$CONTENTS_DIR/MacOS"
+EXECUTABLE="$APP_DIR/.build/debug/AgentBoard"
 
 cd "$APP_DIR"
-exec swift run AgentBoard "$@"
+
+swift build --disable-sandbox >/dev/null
+
+mkdir -p "$MACOS_DIR"
+ln -sf "$EXECUTABLE" "$MACOS_DIR/AgentBoard"
+
+cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleExecutable</key>
+  <string>AgentBoard</string>
+  <key>CFBundleIdentifier</key>
+  <string>dev.agent-board.AgentBoard</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>AgentBoard</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>0.1.0</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>15.0</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>NSPrincipalClass</key>
+  <string>NSApplication</string>
+</dict>
+</plist>
+PLIST
+
+printf 'APPL????' > "$CONTENTS_DIR/PkgInfo"
+
+exec open -n "$APP_BUNDLE" --args "$@"

@@ -1,7 +1,9 @@
+import AppKit
 import SwiftUI
 
 @main
 struct AgentBoardApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = AgentBoardStore()
 
     var body: some Scene {
@@ -32,6 +34,25 @@ struct AgentBoardApp: App {
                 .environmentObject(store)
                 .frame(width: 920, height: 620)
         }
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+
+        DispatchQueue.main.async {
+            if NSApp.windows.isEmpty {
+                NSApp.sendAction(#selector(NSWindow.newWindowForTab(_:)), to: nil, from: nil)
+            }
+            NSApp.windows.first?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
     }
 }
 

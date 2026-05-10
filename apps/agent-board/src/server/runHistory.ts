@@ -16,20 +16,21 @@ export type CreatedRun = {
   script: string;
 };
 
+const agentBoardDir = process.env.AGENT_BOARD_HOME || join(homedir(), ".agent-board");
+
 export async function createRunArtifacts(
-  repoSlug: string,
+  workspaceId: string,
   request: RunRequest,
   runner: Runner
 ): Promise<CreatedRun> {
   return time("run.create_artifacts", {
-    repo: repoSlug,
+    workspaceId,
     actionId: request.actionId,
     runnerId: runner.id,
     selectedCount: request.selectedRefs.length
   }, async () => {
     const runId = createRunId(request.actionId, request.selectedRefs);
-    const repoId = repoSlug.replace("/", "__");
-    const runDir = join(homedir(), ".agent-board", "runs", repoId);
+    const runDir = join(agentBoardDir, "runs", workspaceId);
     const recordPath = join(runDir, `${runId}.json`);
     const statusPath = join(runDir, `${runId}.status.json`);
     const scriptPath = join(runDir, `${runId}.sh`);
@@ -46,7 +47,7 @@ export async function createRunArtifacts(
         {
           id: runId,
           startedAt: new Date().toISOString(),
-          repo: repoSlug,
+          workspaceId,
           gitRoot: request.cwd,
           boardId: request.boardId,
           laneId: request.laneId,
@@ -92,9 +93,8 @@ function resolvePermissionMode(runner: Runner, requestedModeId: string | undefin
   return modes.find((mode) => mode.id === modeId) ?? modes.find((mode) => mode.id === "default") ?? modes[0] ?? null;
 }
 
-export async function readRunStatuses(repoSlug: string, runIds: string[]): Promise<RunStatus[]> {
-  const repoId = repoSlug.replace("/", "__");
-  const runDir = join(homedir(), ".agent-board", "runs", repoId);
+export async function readRunStatuses(workspaceId: string, runIds: string[]): Promise<RunStatus[]> {
+  const runDir = join(agentBoardDir, "runs", workspaceId);
   return Promise.all(runIds.map(async (runId) => {
     const statusPath = join(runDir, `${runId}.status.json`);
     if (!existsSync(statusPath)) return { runId, status: "unknown" };

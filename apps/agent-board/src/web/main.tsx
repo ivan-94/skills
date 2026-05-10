@@ -21,9 +21,11 @@ import {
 } from "lucide-react";
 import type {
   ActionConfig,
+  AgentBoardConfig,
   BoardConfig,
   BoardItem,
   BoardsResponse,
+  ConfigResponse,
   LabelMutationResponse,
   LaneConfig,
   LaneQuery,
@@ -35,6 +37,7 @@ import type {
   RunnerPermissionMode,
   TerminalConfig,
   TerminalTool,
+  WorkspaceConfig,
   WorkflowConfig
 } from "../shared/types.ts";
 import {
@@ -93,6 +96,7 @@ type AppMessage = {
 
 function App() {
   const [data, setData] = useState<BoardsResponse | null>(null);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(() => new URLSearchParams(window.location.search).get("workspace") ?? "");
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeBoardId, setActiveBoardId] = useState<string>("issues");
@@ -100,6 +104,8 @@ function App() {
   const [dialog, setDialog] = useState<RunDialogState | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [configDraft, setConfigDraft] = useState<WorkflowConfig | null>(null);
+  const [appConfigDraft, setAppConfigDraft] = useState<AgentBoardConfig | null>(null);
+  const [addWorkspaceOpen, setAddWorkspaceOpen] = useState(false);
   const [messages, setMessages] = useState<AppMessage[]>([]);
   const [reportedSetupSignature, setReportedSetupSignature] = useState("");
   const [itemRuns, setItemRuns] = useState<Record<string, ItemRunState>>({});
@@ -128,10 +134,18 @@ function App() {
     if (mode === "initial") setInitialLoading(true);
     else setRefreshing(true);
     try {
-      const response = await fetch(mode === "background" ? "/api/boards?refresh=blocking" : "/api/boards");
+      const response = await fetch(apiPath("/api/boards", {
+        workspace: activeWorkspaceId,
+        refresh: mode === "background" ? "blocking" : undefined
+      }));
       const body = (await response.json()) as BoardsResponse | { error: string };
       if (!response.ok || "error" in body) throw new Error("error" in body ? body.error : "Load failed");
       setData(body);
+      const resolvedWorkspaceId = body.project.workspace?.id ?? "";
+      if (resolvedWorkspaceId && resolvedWorkspaceId !== activeWorkspaceId) {
+        setActiveWorkspaceId(resolvedWorkspaceId);
+        updateWorkspaceUrl(resolvedWorkspaceId);
+      }
       setActiveBoardId((current) => body.boards.some((board) => board.id === current) ? current : body.boards[0]?.id ?? "issues");
     } catch (caught) {
       reportMessage("Refresh failed", caught instanceof Error ? caught.message : String(caught), "danger");
@@ -144,6 +158,13 @@ function App() {
   useEffect(() => {
     void refresh("initial");
   }, []);
+
+  useEffect(() => {
+    if (!data) return;
+    setSelection(null);
+    setItemRuns({});
+    void refresh("initial");
+  }, [activeWorkspaceId]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -186,7 +207,10 @@ function App() {
   useEffect(() => {
     if (!activeRunIds.length) return;
     const poll = async () => {
-      const response = await fetch(`/api/runs/status?ids=${encodeURIComponent(activeRunIds.join(","))}`);
+      const response = await fetch(apiPath("/api/runs/status", {
+        workspace: activeWorkspaceId,
+        ids: activeRunIds.join(",")
+      }));
       const body = (await response.json()) as RunStatusResponse | { error: string };
       if (!response.ok || "error" in body) return;
       const finished = new Set(
@@ -311,7 +335,7 @@ function App() {
     prompt: string;
     cwd: string;
   }): Promise<{ runId?: string; scriptPath?: string; error?: string }> {
-    const response = await fetch("/api/runs", {
+    const response = await fetch(apiPath("/api/runs", { workspace: activeWorkspaceId }), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(request)
@@ -360,7 +384,7 @@ function App() {
     const busyKey = `${item.id}:${action}:${normalizedLabel}`;
     setLabelBusy((current) => ({ ...current, [busyKey]: true }));
     try {
-      const response = await fetch("/api/items/labels", {
+      const response = await fetch(apiPath("/api/items/labels", { workspace: activeWorkspaceId }), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -386,30 +410,58 @@ function App() {
   }
 
   async function openConfigDialog() {
-    const response = await fetch("/api/config");
-    const body = (await response.json()) as { config?: WorkflowConfig; error?: string };
-    if (!response.ok || body.error || !body.config) {
-      reportMessage("Config load failed", body.error ?? "Failed to load config.", "danger");
+    const response = await fetch(apiPath("/api/config", { workspace: activeWorkspaceId }));
+    const body = (await response.json()) as ConfigResponse | { error: string };
+    if (!response.ok || "error" in body) {
+      reportMessage("Config load failed", "error" in body ? body.error : "Failed to load config.", "danger");
       return;
     }
     setConfigDraft(cloneConfig(body.config));
+    setAppConfigDraft(cloneAppConfig(body.appConfig));
+    if (body.activeWorkspaceId && body.activeWorkspaceId !== activeWorkspaceId) {
+      setActiveWorkspaceId(body.activeWorkspaceId);
+      updateWorkspaceUrl(body.activeWorkspaceId);
+    }
     setConfigDialogOpen(true);
   }
 
-  async function saveConfig(config: WorkflowConfig) {
-    const response = await fetch("/api/config/save", {
+  async function saveConfig(config: WorkflowConfig, appConfig: AgentBoardConfig) {
+    const response = await fetch(apiPath("/api/config/save", { workspace: activeWorkspaceId }), {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ config, overwrite: true })
+      body: JSON.stringify({ config, appConfig })
     });
-    const body = (await response.json()) as { saved?: boolean; path?: string; error?: string };
+    const body = (await response.json()) as { saved?: boolean; path?: string; appConfig?: AgentBoardConfig; activeWorkspaceId?: string; error?: string };
     if (!response.ok || body.error) {
       reportMessage("Config save failed", body.error ?? "Failed to save config.", "danger");
       return;
     }
+    const workspaceChanged = Boolean(body.activeWorkspaceId && body.activeWorkspaceId !== activeWorkspaceId);
+    if (body.activeWorkspaceId) {
+      setActiveWorkspaceId(body.activeWorkspaceId);
+      updateWorkspaceUrl(body.activeWorkspaceId);
+    }
     reportMessage("Config saved", `Saved ${body.path}`, "success");
     setConfigDialogOpen(false);
-    await refresh("background");
+    if (!workspaceChanged) await refresh("background");
+  }
+
+  async function addWorkspace(path: string, name?: string) {
+    const response = await fetch("/api/workspaces", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path, name })
+    });
+    const body = (await response.json()) as { workspace?: WorkspaceConfig; activeWorkspaceId?: string; appConfig?: AgentBoardConfig; error?: string };
+    if (!response.ok || body.error || !body.workspace) {
+      reportMessage("Workspace add failed", body.error ?? "Failed to add workspace.", "danger");
+      return false;
+    }
+    setActiveWorkspaceId(body.workspace.id);
+    updateWorkspaceUrl(body.workspace.id);
+    setAddWorkspaceOpen(false);
+    reportMessage("Workspace added", `${body.workspace.name} · ${body.workspace.repoSlug}`, "success");
+    return true;
   }
 
   return (
@@ -418,8 +470,8 @@ function App() {
         <div className="topbarMain">
           <div className="brandRow">
             <div className="brand">Agent Board</div>
-            <Badge variant={data?.project.configSource === "project" ? "default" : "outline"}>
-              {data?.project.configSource === "project" ? ".agent-board.yml" : "Default"}
+            <Badge variant={data?.project.configSource === "workspace" ? "default" : "outline"}>
+              {data?.project.configSource === "workspace" ? "Workspace" : "Default"}
             </Badge>
           </div>
           <div className="meta truncate">
@@ -427,6 +479,15 @@ function App() {
           </div>
         </div>
         <div className="topbarActions">
+          <WorkspaceMenu
+            workspaces={data?.project.workspaces ?? []}
+            activeWorkspaceId={data?.project.workspace?.id ?? activeWorkspaceId}
+            onSelect={(workspaceId) => {
+              setActiveWorkspaceId(workspaceId);
+              updateWorkspaceUrl(workspaceId);
+            }}
+            onAdd={() => setAddWorkspaceOpen(true)}
+          />
           {data?.project.missingLabels.length ? <MissingLabelsMenu labels={data.project.missingLabels} /> : null}
           <InboxMenu
             messages={messages}
@@ -461,6 +522,10 @@ function App() {
       </header>
 
       <main className="boardShell">
+        {!initialLoading && !data?.project.workspace ? (
+          <EmptyWorkspaceState onAdd={addWorkspace} />
+        ) : (
+        <>
         <Card className="boardToolbar">
           <nav className="tabs">
             {data?.boards.map((board) => (
@@ -495,6 +560,8 @@ function App() {
             onRemoveLabel={(item, label) => void mutateLabel(item, "remove", label)}
           />
         ) : null}
+        </>
+        )}
       </main>
 
       {dialog && data ? (
@@ -510,10 +577,23 @@ function App() {
         <ConfigDialog
           open={configDialogOpen}
           config={configDraft}
+          appConfig={appConfigDraft}
           terminalTools={data?.project.terminalTools ?? []}
           onChange={setConfigDraft}
+          onAppConfigChange={setAppConfigDraft}
+          onAddWorkspace={() => {
+            setConfigDialogOpen(false);
+            setAddWorkspaceOpen(true);
+          }}
           onCancel={() => setConfigDialogOpen(false)}
           onSave={saveConfig}
+        />
+      ) : null}
+
+      {addWorkspaceOpen ? (
+        <AddWorkspaceDialog
+          onCancel={() => setAddWorkspaceOpen(false)}
+          onAdd={addWorkspace}
         />
       ) : null}
 
@@ -590,6 +670,125 @@ function GithubMark() {
         d="M8 0C3.58 0 0 3.67 0 8.2c0 3.63 2.29 6.7 5.47 7.79.4.08.55-.18.55-.4 0-.2-.01-.86-.01-1.56-2.01.38-2.53-.5-2.69-.95-.09-.23-.48-.95-.82-1.14-.28-.16-.68-.55-.01-.56.63-.01 1.08.59 1.23.84.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.1-1.78-.21-3.64-.91-3.64-4.04 0-.89.31-1.63.82-2.2-.08-.21-.36-1.04.08-2.17 0 0 .67-.22 2.2.84A7.4 7.4 0 0 1 8 3.96c.68 0 1.36.09 2 .27 1.53-1.06 2.2-.84 2.2-.84.44 1.13.16 1.96.08 2.17.51.57.82 1.3.82 2.2 0 3.14-1.87 3.83-3.65 4.04.29.26.54.75.54 1.51 0 1.09-.01 1.97-.01 2.24 0 .22.15.49.55.4A8.1 8.1 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"
       />
     </svg>
+  );
+}
+
+function WorkspaceMenu(props: {
+  workspaces: WorkspaceConfig[];
+  activeWorkspaceId: string;
+  onSelect: (workspaceId: string) => void;
+  onAdd: () => void;
+}) {
+  const active = props.workspaces.find((workspace) => workspace.id === props.activeWorkspaceId);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="workspaceTrigger">
+          {active?.name ?? "Workspace"}
+          <ChevronDown size={13} />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-72">
+        {props.workspaces.length ? (
+          props.workspaces.map((workspace) => (
+            <DropdownMenuItem key={workspace.id} onSelect={() => props.onSelect(workspace.id)}>
+              <span className="workspaceItem">
+                <strong>{workspace.name}</strong>
+                <small>{workspace.repoSlug}</small>
+              </span>
+            </DropdownMenuItem>
+          ))
+        ) : (
+          <DropdownMenuItem disabled>No workspaces</DropdownMenuItem>
+        )}
+        <DropdownMenuItem onSelect={props.onAdd}>
+          <Plus size={13} />
+          Add Workspace
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function EmptyWorkspaceState(props: { onAdd: (path: string, name?: string) => Promise<boolean> }) {
+  const [path, setPath] = useState("");
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    if (!path.trim()) return;
+    setBusy(true);
+    try {
+      await props.onAdd(path.trim(), name.trim() || undefined);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="emptyWorkspace">
+      <h2>Add a workspace</h2>
+      <p>Select a local Git repository with a GitHub remote. Agent Board stores workspace state under <code>~/.agent-board</code>.</p>
+      <div className="workspaceForm">
+        <Input value={path} placeholder="/path/to/repo" onChange={(event) => setPath(event.target.value)} />
+        <Input value={name} placeholder="Display name (optional)" onChange={(event) => setName(event.target.value)} />
+        <Button onClick={submit} disabled={!path.trim() || busy}>
+          {busy ? <LoaderCircle className="spin" size={15} /> : <Plus size={15} />}
+          Add Workspace
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+function AddWorkspaceDialog(props: {
+  onCancel: () => void;
+  onAdd: (path: string, name?: string) => Promise<boolean>;
+}) {
+  const [path, setPath] = useState("");
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    if (!path.trim()) return;
+    setBusy(true);
+    try {
+      await props.onAdd(path.trim(), name.trim() || undefined);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open className="smallDialog">
+      <DialogHeader>
+        <div>
+          <DialogTitle>Add Workspace</DialogTitle>
+          <DialogDescription>Path must be a local Git repository with a GitHub remote.</DialogDescription>
+        </div>
+        <Button variant="ghost" size="icon" aria-label="Close" onClick={props.onCancel}><X size={16} /></Button>
+      </DialogHeader>
+      <div className="dialogBody">
+        <div className="compactGrid">
+          <Field label="Repository path" className="span2">
+            <Input value={path} placeholder="/path/to/repo" onChange={(event) => setPath(event.target.value)} autoFocus />
+          </Field>
+          <Field label="Display name" className="span2">
+            <Input value={name} placeholder="Optional" onChange={(event) => setName(event.target.value)} />
+          </Field>
+        </div>
+      </div>
+      <DialogFooter>
+        <span />
+        <div className="footerActions">
+          <Button variant="outline" onClick={props.onCancel}>Cancel</Button>
+          <Button onClick={submit} disabled={!path.trim() || busy}>
+            {busy ? <LoaderCircle className="spin" size={15} /> : <Plus size={15} />}
+            Add
+          </Button>
+        </div>
+      </DialogFooter>
+    </Dialog>
   );
 }
 
@@ -996,13 +1195,16 @@ function RunDialog(props: {
 function ConfigDialog(props: {
   open: boolean;
   config: WorkflowConfig;
+  appConfig: AgentBoardConfig | null;
   terminalTools: TerminalTool[];
   onChange: (config: WorkflowConfig) => void;
+  onAppConfigChange: (config: AgentBoardConfig) => void;
+  onAddWorkspace: () => void;
   onCancel: () => void;
-  onSave: (config: WorkflowConfig) => void;
+  onSave: (config: WorkflowConfig, appConfig: AgentBoardConfig) => void;
 }) {
   const [activeBoardId, setActiveBoardId] = useState(props.config.boards[0]?.id ?? "");
-  const [section, setSection] = useState<"boards" | "runners" | "terminal">("boards");
+  const [section, setSection] = useState<"workspaces" | "boards" | "runners" | "terminal">("boards");
   const activeBoard = props.config.boards.find((board) => board.id === activeBoardId) ?? props.config.boards[0];
   const [activeLaneId, setActiveLaneId] = useState(activeBoard?.lanes[0]?.id ?? "");
   const activeLane = activeBoard?.lanes.find((lane) => lane.id === activeLaneId) ?? activeBoard?.lanes[0];
@@ -1119,6 +1321,25 @@ function ConfigDialog(props: {
     });
   }
 
+  function updateWorkspace(workspaceId: string, patch: Partial<WorkspaceConfig>) {
+    if (!props.appConfig) return;
+    props.onAppConfigChange({
+      ...props.appConfig,
+      workspaces: props.appConfig.workspaces.map((workspace) =>
+        workspace.id === workspaceId ? { ...workspace, ...patch } : workspace
+      )
+    });
+  }
+
+  function removeWorkspace(workspaceId: string) {
+    if (!props.appConfig) return;
+    props.onAppConfigChange({
+      ...props.appConfig,
+      lastUsedWorkspaceId: props.appConfig.lastUsedWorkspaceId === workspaceId ? props.appConfig.workspaces.find((workspace) => workspace.id !== workspaceId)?.id : props.appConfig.lastUsedWorkspaceId,
+      workspaces: props.appConfig.workspaces.filter((workspace) => workspace.id !== workspaceId)
+    });
+  }
+
   return (
     <Dialog open={props.open} className="configDialog">
       <DialogHeader>
@@ -1131,6 +1352,9 @@ function ConfigDialog(props: {
 
       <div className="configLayout">
         <aside className="configSidebar">
+          <Button variant={section === "workspaces" ? "default" : "ghost"} size="sm" onClick={() => setSection("workspaces")}>
+            Workspaces
+          </Button>
           <Button variant={section === "boards" ? "default" : "ghost"} size="sm" onClick={() => setSection("boards")}>
             Boards
           </Button>
@@ -1161,7 +1385,14 @@ function ConfigDialog(props: {
           ) : null}
         </aside>
 
-        {section === "runners" ? (
+        {section === "workspaces" ? (
+          <WorkspacesConfig
+            workspaces={props.appConfig?.workspaces ?? []}
+            onAdd={props.onAddWorkspace}
+            onUpdate={updateWorkspace}
+            onRemove={removeWorkspace}
+          />
+        ) : section === "runners" ? (
           <RunnersConfig
             runners={props.config.runners ?? []}
             onAdd={addRunner}
@@ -1315,16 +1546,62 @@ function ConfigDialog(props: {
       </div>
 
       <DialogFooter>
-        <span className="muted">Saving writes `.agent-board.yml` in the target repo.</span>
+        <span className="muted">Saving writes to <code>~/.agent-board/config.yml</code> and the current workspace workflow.</span>
         <div className="footerActions">
           <Button variant="outline" onClick={props.onCancel}>Cancel</Button>
-          <Button onClick={() => props.onSave(props.config)}>
+          <Button onClick={() => props.appConfig ? props.onSave(props.config, props.appConfig) : undefined}>
             <Save size={15} />
             Save Configuration
           </Button>
         </div>
       </DialogFooter>
     </Dialog>
+  );
+}
+
+function WorkspacesConfig(props: {
+  workspaces: WorkspaceConfig[];
+  onAdd: () => void;
+  onUpdate: (workspaceId: string, patch: Partial<WorkspaceConfig>) => void;
+  onRemove: (workspaceId: string) => void;
+}) {
+  return (
+    <section className="configPanel">
+      <div className="configSection">
+        <div className="sectionHeader">
+          <div>
+            <h3>Workspaces</h3>
+            <p>Workspace entries are stored globally under ~/.agent-board. Removing an entry does not delete run history or repo files.</p>
+          </div>
+          <Button size="sm" variant="outline" onClick={props.onAdd}>
+            <Plus size={14} />
+            Workspace
+          </Button>
+        </div>
+        <div className="workspaceConfigList">
+          {props.workspaces.map((workspace) => (
+            <Card className="workspaceConfig" key={workspace.id}>
+              <div className="compactGrid">
+                <Field label="Name">
+                  <Input value={workspace.name} onChange={(event) => props.onUpdate(workspace.id, { name: event.target.value })} />
+                </Field>
+                <Field label="Repository">
+                  <Input value={workspace.repoSlug} disabled />
+                </Field>
+                <Field label="Git root" className="span2">
+                  <Input value={workspace.gitRoot} disabled />
+                </Field>
+              </div>
+              <Button size="sm" variant="ghost" onClick={() => props.onRemove(workspace.id)}>
+                <Trash2 size={14} />
+                Remove workspace
+              </Button>
+            </Card>
+          ))}
+          {!props.workspaces.length ? <div className="empty small">No workspaces configured.</div> : null}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -1616,6 +1893,25 @@ function formatCsv(value: string[] | undefined): string {
 
 function cloneConfig(config: WorkflowConfig): WorkflowConfig {
   return JSON.parse(JSON.stringify(config)) as WorkflowConfig;
+}
+
+function cloneAppConfig(config: AgentBoardConfig): AgentBoardConfig {
+  return JSON.parse(JSON.stringify(config)) as AgentBoardConfig;
+}
+
+function apiPath(path: string, params: Record<string, string | undefined>): string {
+  const url = new URL(path, window.location.origin);
+  for (const [key, value] of Object.entries(params)) {
+    if (value) url.searchParams.set(key, value);
+  }
+  return `${url.pathname}${url.search}`;
+}
+
+function updateWorkspaceUrl(workspaceId: string): void {
+  const url = new URL(window.location.href);
+  if (workspaceId) url.searchParams.set("workspace", workspaceId);
+  else url.searchParams.delete("workspace");
+  window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
 function uniqueId(prefix: string, existing: string[]): string {

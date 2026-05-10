@@ -199,6 +199,39 @@
     @apply mb-4 flex shrink-0 items-center justify-between gap-3 p-3;
   }
 
+  .workspaceTrigger {
+    @apply max-w-56;
+  }
+
+  .workspaceItem {
+    @apply grid min-w-0 gap-0.5;
+  }
+
+  .workspaceItem strong,
+  .workspaceItem small {
+    @apply min-w-0 truncate;
+  }
+
+  .workspaceItem small {
+    @apply text-xs text-muted-foreground;
+  }
+
+  .emptyWorkspace {
+    @apply mx-auto mt-[10vh] grid w-[min(680px,100%)] gap-4 p-6;
+  }
+
+  .emptyWorkspace h2 {
+    @apply m-0 text-xl font-bold;
+  }
+
+  .emptyWorkspace p {
+    @apply m-0 text-muted-foreground;
+  }
+
+  .workspaceForm {
+    @apply grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,16rem)_auto];
+  }
+
   .tabs {
     @apply flex gap-2;
   }
@@ -346,6 +379,10 @@
     @apply w-[min(760px,calc(100vw-2rem))];
   }
 
+  .smallDialog {
+    @apply w-[min(560px,calc(100vw-2rem))];
+  }
+
   .configDialog {
     @apply !left-0 !top-0 !h-screen !max-h-screen !w-screen !max-w-none !translate-x-0 !translate-y-0 !rounded-none;
   }
@@ -487,7 +524,8 @@
   .laneList,
   .laneForm,
   .actionConfigList,
-  .runnerConfigList {
+  .runnerConfigList,
+  .workspaceConfigList {
     @apply grid gap-3;
   }
 
@@ -516,7 +554,8 @@
   }
 
   .actionConfig,
-  .runnerConfig {
+  .runnerConfig,
+  .workspaceConfig {
     @apply grid gap-3 p-4;
   }
 

@@ -1,54 +1,63 @@
-import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { parse, stringify } from "yaml";
-import { defaultRunnerConfigs, defaultTerminalConfig, defaultWorkflowConfig } from "./defaultConfig.ts";
-import type { RunnerConfig, WorkflowConfig } from "../shared/types.ts";
-
-export type LoadedConfig = {
-  config: WorkflowConfig;
-  source: "default" | "project";
-  path: string;
-};
-
-export async function loadWorkflowConfig(gitRoot: string): Promise<LoadedConfig> {
-  const configPath = join(gitRoot, ".agent-board.yml");
-  if (!existsSync(configPath)) {
-    return {
-      config: cloneWorkflowConfig(defaultWorkflowConfig),
-      source: "default",
-      path: configPath
-    };
-  }
-
-  const raw = await readFile(configPath, "utf8");
-  const parsed = parse(raw) as WorkflowConfig;
-  assertWorkflowConfig(parsed);
-
-  return {
-    config: withPresetConfig(parsed),
-    source: "project",
-    path: configPath
-  };
-}
+import { defaultRunnerConfigs, defaultTerminalConfig } from "./defaultConfig.ts";
+import type { AgentBoardConfig, RunnerConfig, WorkflowConfig, WorkspaceConfig } from "../shared/types.ts";
 
 export function serializeWorkflowConfig(config: WorkflowConfig): string {
   return stringify(config);
 }
 
-function assertWorkflowConfig(config: WorkflowConfig): void {
-  if (!config || config.version !== 1 || !Array.isArray(config.boards)) {
-    throw new Error(".agent-board.yml must contain version: 1 and boards: []");
+export function serializeAgentBoardConfig(config: AgentBoardConfig): string {
+  return stringify(config);
+}
+
+export function parseAgentBoardConfig(raw: string): AgentBoardConfig {
+  const parsed = parse(raw) as AgentBoardConfig;
+  assertAgentBoardConfig(parsed);
+  return withPresetAgentConfig(parsed);
+}
+
+export function defaultAgentBoardConfig(): AgentBoardConfig {
+  return {
+    version: 1,
+    runners: defaultRunnerConfigs.map(cloneRunner),
+    terminal: { ...defaultTerminalConfig },
+    workspaces: []
+  };
+}
+
+export function workflowFromBoards(boards: WorkflowConfig["boards"]): WorkflowConfig {
+  return {
+    version: 1,
+    boards: JSON.parse(JSON.stringify(boards)) as WorkflowConfig["boards"]
+  };
+}
+
+export function mergeWorkflowWithGlobalConfig(
+  workflow: WorkflowConfig,
+  globalConfig: Pick<AgentBoardConfig, "runners" | "terminal">
+): WorkflowConfig {
+  return {
+    version: 1,
+    boards: JSON.parse(JSON.stringify(workflow.boards)) as WorkflowConfig["boards"],
+    runners: globalConfig.runners.map(cloneRunner),
+    terminal: { ...globalConfig.terminal }
+  };
+}
+
+function assertAgentBoardConfig(config: AgentBoardConfig): void {
+  if (!config || config.version !== 1 || !Array.isArray(config.workspaces)) {
+    throw new Error("Agent Board config must contain version: 1 and workspaces: [].");
   }
 }
 
-function withPresetConfig(config: WorkflowConfig): WorkflowConfig {
+function withPresetAgentConfig(config: AgentBoardConfig): AgentBoardConfig {
   return {
     ...config,
     runners: Array.isArray(config.runners)
       ? withPresetRunnerConfig(config.runners)
-      : defaultRunnerConfigs.map((runner) => ({ ...runner, args: [...runner.args] })),
-    terminal: config.terminal ?? { ...defaultTerminalConfig }
+      : defaultRunnerConfigs.map(cloneRunner),
+    terminal: config.terminal ?? { ...defaultTerminalConfig },
+    workspaces: Array.isArray(config.workspaces) ? config.workspaces.map(cloneWorkspace) : []
   };
 }
 
@@ -68,6 +77,17 @@ function withPresetRunnerConfig(runners: RunnerConfig[]): RunnerConfig[] {
   });
 }
 
-function cloneWorkflowConfig(config: WorkflowConfig): WorkflowConfig {
-  return JSON.parse(JSON.stringify(config)) as WorkflowConfig;
+function cloneRunner(runner: RunnerConfig): RunnerConfig {
+  return {
+    ...runner,
+    args: [...runner.args],
+    permissionModes: runner.permissionModes?.map((mode) => ({
+      ...mode,
+      args: [...mode.args]
+    }))
+  };
+}
+
+function cloneWorkspace(workspace: WorkspaceConfig): WorkspaceConfig {
+  return { ...workspace };
 }

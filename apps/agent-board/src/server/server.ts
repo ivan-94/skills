@@ -1,10 +1,8 @@
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defaultWorkflowConfig, labelsReferencedByConfig } from "./defaultConfig.ts";
-import { loadWorkflowConfig, serializeWorkflowConfig } from "./config.ts";
-import { findFirstGithubRemote, findGitRoot } from "./git.ts";
 import { detectGhStatus, fetchIssues, fetchPullRequests, fetchRepo, updateGithubLabels } from "./github.ts";
 import { renderBoards } from "./boards.ts";
 import { detectRunners } from "./runners.ts";
@@ -12,9 +10,24 @@ import { createRunArtifacts, readRunStatuses } from "./runHistory.ts";
 import { detectTerminalTools, openTerminal } from "./terminal.ts";
 import { log, time } from "./logger.ts";
 import { requireCommand } from "./process.ts";
+import {
+  addWorkspace,
+  loadAgentBoardConfig,
+  loadWorkspaceWorkflow,
+  removeWorkspace,
+  saveAgentBoardConfig,
+  saveWorkspaceWorkflow,
+  selectWorkspace,
+  setLastUsedWorkspace,
+  updateWorkspace
+} from "./workspaces.ts";
+import { mergeWorkflowWithGlobalConfig } from "./config.ts";
 import type {
+  AddWorkspaceRequest,
+  AgentBoardConfig,
   BoardItem,
   BoardsResponse,
+  ConfigResponse,
   LabelMutationRequest,
   LabelMutationResponse,
   ProjectState,
@@ -22,6 +35,8 @@ import type {
   RunResponse,
   RunStatusResponse,
   Runner,
+  UpdateWorkspaceRequest,
+  WorkspaceConfig,
   WorkflowConfig
 } from "../shared/types.ts";
 
@@ -29,12 +44,18 @@ type AppState = {
   project: ProjectState;
   config: WorkflowConfig;
   items: BoardItem[];
+  workspace: WorkspaceConfig;
+  appConfig: AgentBoardConfig;
 };
 
-type AppCache = {
+type CachedWorkspaceState = {
   state: AppState | null;
   loadedAt: number;
   loading: Promise<AppState> | null;
+};
+
+type AppCache = {
+  states: Map<string, CachedWorkspaceState>;
 };
 
 type ServerOptions = {
@@ -53,7 +74,7 @@ const cacheTtlMs = 5 * 60 * 1000;
 export async function startServer(options: ServerOptions): Promise<{ url: string; server: Bun.Server<undefined> }> {
   log("info", "server.start", { cwd: options.cwd, preferredPort: options.port, openBrowser: options.openBrowser });
   const clientScript = await buildClient();
-  const cache: AppCache = { state: null, loadedAt: 0, loading: null };
+  const cache: AppCache = { states: new Map() };
 
   const server = startOnAvailablePort(options.port, createFetchHandler(options.cwd, clientScript, cache));
 
@@ -112,15 +133,56 @@ function createFetchHandler(cwd: string, clientScript: string, cache: AppCache) 
         return fileResponse(join(clientOutDir, basename(url.pathname)), "application/javascript; charset=utf-8");
       }
 
+      if (url.pathname === "/api/workspaces" && request.method === "GET") {
+        log("info", "http.request", { method: request.method, path: url.pathname });
+        const appConfig = await loadAgentBoardConfig();
+        return json({ appConfig, activeWorkspaceId: selectWorkspace(appConfig, readWorkspaceParam(url))?.id });
+      }
+
+      if (url.pathname === "/api/workspaces" && request.method === "POST") {
+        log("info", "http.request", { method: request.method, path: url.pathname });
+        const body = (await request.json()) as AddWorkspaceRequest;
+        const workspace = await addWorkspace(body.path, body.name);
+        clearCache(cache, workspace.id);
+        const appConfig = await loadAgentBoardConfig();
+        return json({ workspace, appConfig, activeWorkspaceId: workspace.id });
+      }
+
+      const workspaceRoute = matchWorkspaceRoute(url.pathname);
+      if (workspaceRoute && request.method === "PATCH") {
+        log("info", "http.request", { method: request.method, path: url.pathname, workspaceId: workspaceRoute.id });
+        const body = (await request.json()) as UpdateWorkspaceRequest;
+        const workspace = await updateWorkspace(workspaceRoute.id, body);
+        const appConfig = await loadAgentBoardConfig();
+        return json({ workspace, appConfig, activeWorkspaceId: appConfig.lastUsedWorkspaceId });
+      }
+
+      if (workspaceRoute && request.method === "DELETE") {
+        log("info", "http.request", { method: request.method, path: url.pathname, workspaceId: workspaceRoute.id });
+        await removeWorkspace(workspaceRoute.id);
+        clearCache(cache, workspaceRoute.id);
+        const appConfig = await loadAgentBoardConfig();
+        return json({ appConfig, activeWorkspaceId: appConfig.lastUsedWorkspaceId });
+      }
+
       if (url.pathname === "/api/project" && request.method === "GET") {
         log("info", "http.request", { method: request.method, path: url.pathname, refresh: url.searchParams.get("refresh") });
-        const state = await getCachedAppState(cwd, cache, readRefreshParam(url));
+        const resolved = await resolveRequestWorkspace(url);
+        if (!resolved.workspace) return json(await emptyProjectState(resolved.appConfig, cwd));
+        const state = await getCachedAppState(resolved.workspace, resolved.appConfig, cache, readRefreshParam(url));
         return json(state.project);
       }
 
       if (url.pathname === "/api/boards" && request.method === "GET") {
         log("info", "http.request", { method: request.method, path: url.pathname, refresh: url.searchParams.get("refresh") });
-        const state = await getCachedAppState(cwd, cache, readRefreshParam(url));
+        const resolved = await resolveRequestWorkspace(url);
+        if (!resolved.workspace) {
+          const project = await emptyProjectState(resolved.appConfig, cwd);
+          const response: BoardsResponse = { boards: [], project };
+          return json(response);
+        }
+        await setLastUsedWorkspace(resolved.workspace.id);
+        const state = await getCachedAppState(resolved.workspace, resolved.appConfig, cache, readRefreshParam(url));
         const boards = renderBoards(state.config, state.items, state.project.repo?.labels ?? []);
         const response: BoardsResponse = { boards, project: state.project };
         return json(response);
@@ -128,22 +190,20 @@ function createFetchHandler(cwd: string, clientScript: string, cache: AppCache) 
 
       if (url.pathname === "/api/config" && request.method === "GET") {
         log("info", "http.request", { method: request.method, path: url.pathname });
-        const state = await loadConfigState(cwd);
-        return json({
-          config: state.config,
-          source: state.source,
-          path: state.path
-        });
+        const state = await loadConfigState(url);
+        return json(state);
       }
 
       if (url.pathname === "/api/runs" && request.method === "POST") {
         log("info", "http.request", { method: request.method, path: url.pathname });
         const body = (await request.json()) as RunRequest;
-        const state = await getCachedAppState(cwd, cache, "none");
+        const resolved = await resolveRequestWorkspace(url);
+        if (!resolved.workspace) return json({ error: "No workspace selected." }, 400);
+        const state = await getCachedAppState(resolved.workspace, resolved.appConfig, cache, "none");
         if (!state.project.githubRepoSlug) return json({ error: "No GitHub repo detected." }, 400);
 
         const runner = resolveRunner(state.project.runners, body);
-        const run = await createRunArtifacts(state.project.githubRepoSlug, body, runner);
+        const run = await createRunArtifacts(state.workspace.id, body, runner);
         const opened = await openTerminal(run.scriptPath, state.config.terminal, state.project.terminalTools);
         const response: RunResponse = {
           runId: run.runId,
@@ -157,11 +217,13 @@ function createFetchHandler(cwd: string, clientScript: string, cache: AppCache) 
 
       if (url.pathname === "/api/runs/status" && request.method === "GET") {
         log("info", "http.request", { method: request.method, path: url.pathname });
-        const state = await getCachedAppState(cwd, cache, "none");
+        const resolved = await resolveRequestWorkspace(url);
+        if (!resolved.workspace) return json({ error: "No workspace selected." }, 400);
+        const state = await getCachedAppState(resolved.workspace, resolved.appConfig, cache, "none");
         if (!state.project.githubRepoSlug) return json({ error: "No GitHub repo detected." }, 400);
         const runIds = (url.searchParams.get("ids") ?? "").split(",").map((id) => id.trim()).filter(Boolean);
         const response: RunStatusResponse = {
-          runs: await readRunStatuses(state.project.githubRepoSlug, runIds)
+          runs: await readRunStatuses(state.workspace.id, runIds)
         };
         return json(response);
       }
@@ -169,7 +231,9 @@ function createFetchHandler(cwd: string, clientScript: string, cache: AppCache) 
       if (url.pathname === "/api/items/labels" && request.method === "POST") {
         log("info", "http.request", { method: request.method, path: url.pathname });
         const body = (await request.json()) as LabelMutationRequest;
-        const state = await getCachedAppState(cwd, cache, "none");
+        const resolved = await resolveRequestWorkspace(url);
+        if (!resolved.workspace) return json({ error: "No workspace selected." }, 400);
+        const state = await getCachedAppState(resolved.workspace, resolved.appConfig, cache, "none");
         if (!state.project.githubRepoSlug) return json({ error: "No GitHub repo detected." }, 400);
         const label = body.label?.trim();
         if (!label) return json({ error: "Label is required." }, 400);
@@ -178,8 +242,11 @@ function createFetchHandler(cwd: string, clientScript: string, cache: AppCache) 
 
         await updateGithubLabels(state.project.githubRepoSlug, body.itemType, body.number, body.action, label);
         const item = mutateCachedItemLabel(state, body.itemType, body.number, body.action, label);
-        cache.state = state;
-        cache.loadedAt = Date.now();
+        const entry = cache.states.get(state.workspace.id);
+        if (entry) {
+          entry.state = state;
+          entry.loadedAt = Date.now();
+        }
         const boards = renderBoards(state.config, state.items, state.project.repo?.labels ?? []);
         const response: LabelMutationResponse = { item, boards, project: state.project };
         return json(response);
@@ -189,20 +256,26 @@ function createFetchHandler(cwd: string, clientScript: string, cache: AppCache) 
         log("info", "http.request", { method: request.method, path: url.pathname });
         const body = (await request.json().catch(() => ({}))) as {
           config?: WorkflowConfig;
-          overwrite?: boolean;
+          appConfig?: AgentBoardConfig;
         };
-        const state = await loadConfigState(cwd);
+        const state = await loadConfigState(url);
         const config = body.config ?? state.config;
         validateWorkflowConfig(config);
-        if (existsSync(state.path) && !body.overwrite) {
-          return json({ error: ".agent-board.yml already exists." }, 409);
+        const nextAppConfig = body.appConfig ?? state.appConfig;
+        nextAppConfig.runners = config.runners ?? nextAppConfig.runners;
+        nextAppConfig.terminal = config.terminal ?? nextAppConfig.terminal;
+        const activeWorkspaceId = state.activeWorkspaceId && nextAppConfig.workspaces.some((workspace) => workspace.id === state.activeWorkspaceId)
+          ? state.activeWorkspaceId
+          : nextAppConfig.workspaces[0]?.id;
+        nextAppConfig.lastUsedWorkspaceId = activeWorkspaceId;
+        await saveAgentBoardConfig(nextAppConfig);
+        if (activeWorkspaceId && activeWorkspaceId === state.activeWorkspaceId) {
+          await saveWorkspaceWorkflow(activeWorkspaceId, config);
+          clearCache(cache, activeWorkspaceId);
+        } else {
+          clearCache(cache);
         }
-        await time("config.save", { path: state.path, overwrite: body.overwrite === true }, () =>
-          writeFile(state.path, serializeWorkflowConfig(config))
-        );
-        cache.state = null;
-        cache.loadedAt = 0;
-        return json({ saved: true, path: state.path });
+        return json({ saved: true, path: state.path, appConfig: nextAppConfig, activeWorkspaceId });
       }
 
       return json({ error: "Not found." }, 404);
@@ -217,53 +290,28 @@ function createFetchHandler(cwd: string, clientScript: string, cache: AppCache) 
   };
 }
 
-async function loadAppState(cwd: string): Promise<AppState> {
-  return time("app_state.load", { cwd }, async () => {
+async function loadAppState(workspace: WorkspaceConfig, appConfig: AgentBoardConfig): Promise<AppState> {
+  return time("app_state.load", { workspaceId: workspace.id, gitRoot: workspace.gitRoot, repo: workspace.repoSlug }, async () => {
     const errors: string[] = [];
-    let gitRoot = cwd;
-    let githubRepoSlug: string | null = null;
     let repo = null;
-    let config = defaultWorkflowConfig;
-    let configSource: "default" | "project" = "default";
-    let configPath = join(cwd, ".agent-board.yml");
     let items: BoardItem[] = [];
-
-    try {
-      gitRoot = await findGitRoot(cwd);
-    } catch (error) {
-      errors.push(messageOf(error));
-    }
-
-    try {
-      const loadedConfig = await loadWorkflowConfig(gitRoot);
-      config = loadedConfig.config;
-      configSource = loadedConfig.source;
-      configPath = loadedConfig.path;
-    } catch (error) {
-      errors.push(messageOf(error));
-    }
-
-    try {
-      const remote = await findFirstGithubRemote(gitRoot);
-      githubRepoSlug = remote.slug;
-    } catch (error) {
-      errors.push(messageOf(error));
-    }
+    const loadedWorkflow = await loadWorkspaceWorkflow(workspace, appConfig);
+    const config = loadedWorkflow.config;
 
     const ghError = await detectGhStatus();
     if (ghError) errors.push(ghError);
 
-    if (githubRepoSlug && !ghError) {
+    if (!ghError) {
       try {
-        repo = await fetchRepo(githubRepoSlug);
+        repo = await fetchRepo(workspace.repoSlug);
       } catch (error) {
         errors.push(messageOf(error));
       }
 
       try {
         const [issues, prs] = await Promise.all([
-          repo?.issuesEnabled === false ? Promise.resolve([]) : fetchIssues(githubRepoSlug),
-          fetchPullRequests(githubRepoSlug)
+          repo?.issuesEnabled === false ? Promise.resolve([]) : fetchIssues(workspace.repoSlug),
+          fetchPullRequests(workspace.repoSlug)
         ]);
         items = [...issues, ...prs];
       } catch (error) {
@@ -282,21 +330,27 @@ async function loadAppState(cwd: string): Promise<AppState> {
     const state = {
       config,
       items,
+      workspace,
+      appConfig,
       project: {
-        gitRoot,
+        gitRoot: workspace.gitRoot,
         repo,
-        githubRepoSlug,
-        configSource,
-        configPath,
+        githubRepoSlug: workspace.repoSlug,
+        configSource: loadedWorkflow.source,
+        configPath: loadedWorkflow.path,
         missingLabels,
         runners,
         terminalTools,
-        errors
+        errors,
+        workspace,
+        workspaces: appConfig.workspaces,
+        lastUsedWorkspaceId: appConfig.lastUsedWorkspaceId
       }
     };
     log("info", "app_state.loaded", {
-      gitRoot,
-      repo: githubRepoSlug,
+      workspaceId: workspace.id,
+      gitRoot: workspace.gitRoot,
+      repo: workspace.repoSlug,
       itemCount: items.length,
       issueCount: items.filter((item) => item.itemType === "issue").length,
       prCount: items.filter((item) => item.itemType === "pullRequest").length,
@@ -308,52 +362,59 @@ async function loadAppState(cwd: string): Promise<AppState> {
 }
 
 async function getCachedAppState(
-  cwd: string,
+  workspace: WorkspaceConfig,
+  appConfig: AgentBoardConfig,
   cache: AppCache,
   refresh: "blocking" | "stale-while-revalidate" | "none"
 ): Promise<AppState> {
+  const entry = cache.states.get(workspace.id) ?? { state: null, loadedAt: 0, loading: null };
+  cache.states.set(workspace.id, entry);
   const now = Date.now();
-  const hasFreshCache = cache.state && now - cache.loadedAt < cacheTtlMs;
+  const hasFreshCache = entry.state && now - entry.loadedAt < cacheTtlMs;
 
   if (refresh === "blocking") {
-    log("info", "cache.refresh_blocking", { cwd });
-    return refreshAppState(cwd, cache);
+    log("info", "cache.refresh_blocking", { workspaceId: workspace.id });
+    return refreshAppState(workspace, appConfig, entry);
   }
 
-  if (cache.state && (refresh === "none" || hasFreshCache)) {
-    log("info", "cache.hit", { cwd, ageMs: now - cache.loadedAt, refresh });
-    return cache.state;
+  if (entry.state && (refresh === "none" || hasFreshCache)) {
+    log("info", "cache.hit", { workspaceId: workspace.id, ageMs: now - entry.loadedAt, refresh });
+    return entry.state;
   }
 
-  if (cache.state && refresh === "stale-while-revalidate") {
-    log("info", "cache.stale_return", { cwd, ageMs: now - cache.loadedAt });
-    void refreshAppState(cwd, cache).catch(() => undefined);
-    return cache.state;
+  if (entry.state && refresh === "stale-while-revalidate") {
+    log("info", "cache.stale_return", { workspaceId: workspace.id, ageMs: now - entry.loadedAt });
+    void refreshAppState(workspace, appConfig, entry).catch(() => undefined);
+    return entry.state;
   }
 
-  log("info", "cache.miss", { cwd, refresh });
-  return refreshAppState(cwd, cache);
+  log("info", "cache.miss", { workspaceId: workspace.id, refresh });
+  return refreshAppState(workspace, appConfig, entry);
 }
 
-async function refreshAppState(cwd: string, cache: AppCache): Promise<AppState> {
-  if (cache.loading) {
-    log("info", "cache.loading_join", { cwd });
-    return cache.loading;
+async function refreshAppState(
+  workspace: WorkspaceConfig,
+  appConfig: AgentBoardConfig,
+  entry: CachedWorkspaceState
+): Promise<AppState> {
+  if (entry.loading) {
+    log("info", "cache.loading_join", { workspaceId: workspace.id });
+    return entry.loading;
   }
 
-  log("info", "cache.refresh_start", { cwd });
-  cache.loading = loadAppState(cwd)
+  log("info", "cache.refresh_start", { workspaceId: workspace.id });
+  entry.loading = loadAppState(workspace, appConfig)
     .then((state) => {
-      cache.state = state;
-      cache.loadedAt = Date.now();
-      log("info", "cache.refresh_ok", { cwd });
+      entry.state = state;
+      entry.loadedAt = Date.now();
+      log("info", "cache.refresh_ok", { workspaceId: workspace.id });
       return state;
     })
     .finally(() => {
-      cache.loading = null;
+      entry.loading = null;
     });
 
-  return cache.loading;
+  return entry.loading;
 }
 
 function readRefreshParam(url: URL): "blocking" | "stale-while-revalidate" | "none" {
@@ -363,24 +424,71 @@ function readRefreshParam(url: URL): "blocking" | "stale-while-revalidate" | "no
   return "none";
 }
 
-async function loadConfigState(cwd: string): Promise<{
-  config: WorkflowConfig;
-  source: "default" | "project";
-  path: string;
-}> {
-  return time("config.load", { cwd }, async () => {
-    let gitRoot = cwd;
+function readWorkspaceParam(url: URL): string | undefined {
+  const value = url.searchParams.get("workspace")?.trim();
+  return value || undefined;
+}
 
-    try {
-      gitRoot = await findGitRoot(cwd);
-    } catch {
-      // Keep config editing available enough to show the default config even
-      // when the current directory is not a git repository.
+async function resolveRequestWorkspace(url: URL): Promise<{
+  appConfig: AgentBoardConfig;
+  workspace: WorkspaceConfig | null;
+}> {
+  const appConfig = await loadAgentBoardConfig();
+  return {
+    appConfig,
+    workspace: selectWorkspace(appConfig, readWorkspaceParam(url)) ?? null
+  };
+}
+
+async function emptyProjectState(appConfig: AgentBoardConfig, cwd: string): Promise<ProjectState> {
+  const [runners, terminalTools] = await Promise.all([
+    detectRunners(appConfig.runners),
+    detectTerminalTools()
+  ]);
+
+  return {
+    gitRoot: cwd,
+    repo: null,
+    githubRepoSlug: null,
+    configSource: "default",
+    configPath: "~/.agent-board/config.yml",
+    missingLabels: [],
+    runners,
+    terminalTools,
+    errors: [],
+    workspace: null,
+    workspaces: appConfig.workspaces,
+    lastUsedWorkspaceId: appConfig.lastUsedWorkspaceId
+  };
+}
+
+function matchWorkspaceRoute(pathname: string): { id: string } | null {
+  const match = pathname.match(/^\/api\/workspaces\/([^/]+)$/);
+  return match ? { id: decodeURIComponent(match[1]) } : null;
+}
+
+function clearCache(cache: AppCache, workspaceId?: string): void {
+  if (workspaceId) cache.states.delete(workspaceId);
+  else cache.states.clear();
+}
+
+async function loadConfigState(url: URL): Promise<ConfigResponse> {
+  return time("config.load", { workspace: readWorkspaceParam(url) }, async () => {
+    const appConfig = await loadAgentBoardConfig();
+    const workspace = selectWorkspace(appConfig, readWorkspaceParam(url));
+    if (!workspace) {
+      const config = mergeWorkflowWithGlobalConfig(defaultWorkflowConfig, appConfig);
+      return {
+        config,
+        source: "default",
+        path: "~/.agent-board/config.yml",
+        appConfig
+      };
     }
 
-    const loadedConfig = await loadWorkflowConfig(gitRoot);
+    const loadedConfig = await loadWorkspaceWorkflow(workspace, appConfig);
     log("info", "config.loaded", {
-      gitRoot,
+      workspaceId: workspace.id,
       source: loadedConfig.source,
       path: loadedConfig.path,
       boardCount: loadedConfig.config.boards.length
@@ -388,7 +496,9 @@ async function loadConfigState(cwd: string): Promise<{
     return {
       config: loadedConfig.config,
       source: loadedConfig.source,
-      path: loadedConfig.path
+      path: loadedConfig.path,
+      appConfig,
+      activeWorkspaceId: workspace.id
     };
   });
 }

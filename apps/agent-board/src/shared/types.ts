@@ -7,6 +7,31 @@ export type WorkflowConfig = {
   boards: BoardConfig[];
 };
 
+export type AgentBoardConfig = {
+  version: 1;
+  lastUsedWorkspaceId?: string;
+  runners: RunnerConfig[];
+  terminal: TerminalConfig;
+  workspaces: WorkspaceConfig[];
+};
+
+export type WorkspaceConfig = {
+  id: string;
+  name: string;
+  gitRoot: string;
+  repoSlug: string;
+  repoUrl: string;
+};
+
+export type AddWorkspaceRequest = {
+  path: string;
+  name?: string;
+};
+
+export type UpdateWorkspaceRequest = {
+  name?: string;
+};
+
 export type TerminalOpenMode = "window" | "tab";
 
 export type TerminalConfig = {
@@ -134,10 +159,13 @@ export type Runner = {
 };
 
 export type ProjectState = {
+  workspace: WorkspaceConfig | null;
+  workspaces: WorkspaceConfig[];
+  lastUsedWorkspaceId?: string;
   gitRoot: string;
   repo: GithubRepo | null;
   githubRepoSlug: string | null;
-  configSource: "default" | "project";
+  configSource: "default" | "workspace";
   configPath: string;
   missingLabels: string[];
   runners: Runner[];
@@ -148,6 +176,14 @@ export type ProjectState = {
 export type BoardsResponse = {
   boards: RenderedBoard[];
   project: ProjectState;
+};
+
+export type ConfigResponse = {
+  config: WorkflowConfig;
+  source: "default" | "workspace";
+  path: string;
+  appConfig: AgentBoardConfig;
+  activeWorkspaceId?: string;
 };
 
 export type RenderActionRequest = {

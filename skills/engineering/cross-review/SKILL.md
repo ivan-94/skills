@@ -171,7 +171,7 @@ Redact secrets from prompts, commands, outputs, and logs when they are obvious. 
 
 ## Failure Behavior
 
-Default timeout: 10 minutes.
+Default timeout: 15 minutes.
 
 Treat these as cross-review failure:
 

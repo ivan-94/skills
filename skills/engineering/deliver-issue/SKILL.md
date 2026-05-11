@@ -27,8 +27,8 @@ It does **not** run HAT. HAT execution belongs to a later workflow that scans PR
 
 Report concise progress to the user at these points:
 
-- Start: issue(s), branch, dirty worktree, `gh` availability, and required gates will be checked.
-- After discovery: issue scope, test plan presence, current implementation state, branch status, and risks.
+- Start: issue(s), branch, worktree isolation, dirty worktree, `gh` availability, and required gates will be checked.
+- After discovery: issue scope, test plan presence, current implementation state, worktree path, branch status, and risks.
 - Before implementation: TDD plan and vertical slice order.
 - After TDD: test result summary and next cross-review step.
 - After cross-review: P0/P1/P2 summary, log path, and whether another TDD loop is required.
@@ -42,6 +42,7 @@ Report concise progress to the user at these points:
 Gather facts before changing code:
 
 - Current branch, upstream, base branch, commits versus base, and `git status --short`.
+- Existing worktrees with `git worktree list`, including whether the intended issue branch is already checked out elsewhere.
 - GitHub remote, `gh auth status`, repo identity, and whether an open PR already exists for the current branch.
 - Issue content for every provided GitHub issue with `gh issue view <number> --comments`.
 - Parent issue or parent PRD references explicitly named by the issue body or comments, such as `## Parent`, `Parent issue`, `Parent PRD`, `Source Manifest`, or a linked PRD/spec. Read those parents before planning implementation. If an explicit parent reference cannot be read, stop and ask the user for access or the missing source.
@@ -50,13 +51,23 @@ Gather facts before changing code:
 - Existing relevant tests, scripts, package commands, docs, `AGENTS.md` / `CLAUDE.md`, `HAT.md`, and prior `hats/` entries.
 - Existing uncommitted changes. If present, list them and ask whether they belong to this delivery before continuing.
 
-If the current branch is a base branch (`main`, `master`, `develop`, `trunk`) and implementation work is needed, recommend creating `issue/<slug>` and wait for confirmation. Use issue number/title for the slug when possible.
+## Worktree Isolation
+
+- Default to executing each delivery in an isolated git worktree created from the confirmed base branch. Use an `issue/<slug>` branch named from the issue number/title when possible.
+- The current checkout may be used for discovery only. Do not implement, test, prepare HAT artifacts, commit, push, or create/update the PR from the original checkout unless the user explicitly opts out of worktree isolation.
+- Before implementation, create or enter the isolated worktree and run all subsequent `/tdd`, `/cross-review`, `/hat-prepare`, commit, push, and PR commands from that worktree.
+- If an issue branch already exists in another worktree, use that worktree after confirming it is the intended delivery workspace. If the existing worktree is dirty or points at the wrong base, stop and ask before continuing.
+- If git worktree creation fails, stop and report the exact blocker instead of falling back to the current checkout.
+
+If implementation work is needed, recommend creating an isolated worktree for `issue/<slug>` and wait for confirmation. Use issue number/title for the slug when possible.
 
 ## Required Gates
 
 Always stop for user confirmation before:
 
 - Creating or switching to a new `issue/<slug>` branch.
+- Creating, reusing, or entering the isolated issue worktree.
+- Opting out of worktree isolation and using the original checkout for implementation.
 - Starting the TDD implementation plan.
 - Continuing with an initially dirty worktree.
 - Running HAT preparation if the environment mode, data needs, or acceptance source are ambiguous.
@@ -71,6 +82,7 @@ Default flow:
 ```text
 GitHub issue(s)
   -> discovery
+  -> create or enter isolated issue worktree
   -> TDD implementation
   -> cross-review
   -> if P0: TDD fix -> cross-review

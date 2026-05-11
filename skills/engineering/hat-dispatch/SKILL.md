@@ -29,7 +29,7 @@ Supported forms:
 - Default: scan all open PRs with `HAT-Ready`.
 - Specific PRs: run only the user-provided PR numbers, such as `#123 #124`.
 - Dry run / list only: list the queue and planned actions, then stop.
-- Prepare allowed: only if the user explicitly authorizes it at invocation time may workers run `prepare.sh prepare` according to `/hat-run` safety rules.
+- Prepare allowed by default: workers may run `prepare.sh prepare` according to `/hat-run` safety rules unless the user explicitly disables prepare at invocation time.
 
 If `gh` is missing, unauthenticated, or the repo is not GitHub, stop and report the missing prerequisite.
 
@@ -86,7 +86,7 @@ Rules:
 - Find the relevant hats/.../guide.md and hats/.../prepare.sh. Prefer paths from the PR body; otherwise discover them in the repo.
 - Run /hat-run against the prepared HAT artifacts.
 - Do not implement fixes, edit product code, commit, push, or comment on GitHub.
-- Do not run prepare.sh prepare unless prepare is explicitly allowed: <true|false>.
+- Do not run prepare.sh prepare unless prepare is allowed in the dispatch plan: <true|false>.
 - If prepare is not allowed and the HAT requires it, mark the run BLOCKED with the reason.
 - Redact secrets from every report and returned summary.
 
@@ -128,10 +128,10 @@ If `results.json` or `summary.md` is missing or cannot be parsed, the main agent
 
 - Workers use existing repo/worktree files: `HAT.md`, `guide.md`, `prepare.sh`, `.env.hat.example`, and local `.env.hat` if present.
 - Do not ask for secrets during fan-out.
-- Missing env, accounts, services, HAT artifacts, or required prepare authorization should become `BLOCKED`.
+- Missing env, accounts, services, HAT artifacts, or explicitly disabled prepare required by the HAT should become `BLOCKED`.
 - Default `/hat-run` scope follows the `hat-run` skill: P0+P1, P0 fail-fast, P2 skipped unless the user requested otherwise.
-- Default prepare behavior: run `prepare.sh info`, do not run `prepare.sh prepare`.
-- If invocation explicitly allowed prepare, workers may run prepare only under `/hat-run` safety rules.
+- Default prepare behavior: run `prepare.sh info`, and run `prepare.sh prepare` when `/hat-run` determines it is needed and allowed by its safety rules.
+- If invocation explicitly disables prepare, workers must not run `prepare.sh prepare`; if the HAT requires it, report `BLOCKED`.
 
 ## Stale Head Protection
 

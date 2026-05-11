@@ -8,6 +8,11 @@ enum ItemType: String, Codable, CaseIterable, Identifiable {
     var title: String { self == .issue ? "Issues" : "Pull Requests" }
 }
 
+enum LabelAction: String, Codable {
+    case add
+    case remove
+}
+
 struct Workspace: Codable, Identifiable, Hashable {
     var id: String
     var name: String
@@ -44,7 +49,7 @@ struct BoardConfiguration: Codable, Identifiable, Hashable {
                 LaneConfiguration(
                     id: "inbox",
                     title: "Inbox",
-                    query: LaneQuery(labelsNone: ["needs-info", "ready-for-agent", "ready-for-human", "wontfix"], includeUnlabeled: true),
+                    query: LaneQuery(labelsNone: ["needs-info", "ready-for-agent", "ready-for-human", "wontfix"]),
                     actions: [ActionConfiguration(id: "triage", title: "分诊", promptTemplate: "/triage 对以下 Issue 进行分诊：{{refs}}")]
                 ),
                 LaneConfiguration(id: "needs-info", title: "Needs Info", query: LaneQuery(labelsAll: ["needs-info"]), actions: []),
@@ -126,9 +131,9 @@ struct RunnerConfiguration: Codable, Identifiable, Hashable {
             command: "claude",
             arguments: ["{{prompt}}"],
             permissionModes: [
-                PermissionMode(id: "default", label: "Default", arguments: [], detail: "Use Claude Code defaults."),
-                PermissionMode(id: "auto-review", label: "Auto Review", arguments: ["--permission-mode", "acceptEdits"], detail: "Allow edits while keeping prompts for riskier tools."),
-                PermissionMode(id: "full-access", label: "All Permissions", arguments: ["--dangerously-skip-permissions"], detail: "Skip permission prompts.")
+                PermissionMode(id: "default", label: "Default", arguments: ["--permission-mode", "default"], detail: "Reads run without prompts; writes and commands ask for approval."),
+                PermissionMode(id: "auto-review", label: "Auto Review", arguments: ["--permission-mode", "auto"], detail: "Claude Code auto mode routes actions through its safety classifier."),
+                PermissionMode(id: "full-access", label: "All Permissions", arguments: ["--permission-mode", "bypassPermissions"], detail: "Bypass permission checks. Use only in an isolated workspace.")
             ]
         )
     ]
@@ -192,4 +197,52 @@ struct RunDraft: Identifiable {
     var runnerID: String
     var permissionModeID: String
     var splitRuns: Bool = false
+}
+
+struct RunRecord: Identifiable, Codable, Hashable {
+    var id: String
+    var itemIDs: [String]
+    var statusPath: String
+    var scriptPath: String
+    var status: RunExecutionStatus = .pending
+}
+
+struct BoardMessage: Identifiable, Hashable {
+    var id = UUID()
+    var title: String
+    var detail: String
+    var createdAt = Date()
+}
+
+enum RunExecutionStatus: String, Codable, Hashable {
+    case pending
+    case running
+    case exited
+    case unknown
+}
+
+struct TerminalPreset: Identifiable, Hashable {
+    var id: String
+    var label: String
+    var appName: String
+    var bundleID: String
+    var supportsTabs: Bool
+    var detected: Bool
+
+    static func detectAll() -> [TerminalPreset] {
+        [
+            TerminalPreset(id: "system", label: "System Terminal", appName: "Terminal", bundleID: "com.apple.Terminal", supportsTabs: true, detected: true),
+            TerminalPreset(id: "iterm", label: "iTerm2", appName: "iTerm", bundleID: "com.googlecode.iterm2", supportsTabs: true, detected: appExists("iTerm") || appExists("iTerm2")),
+            TerminalPreset(id: "warp", label: "Warp", appName: "Warp", bundleID: "dev.warp.Warp-Stable", supportsTabs: false, detected: appExists("Warp")),
+            TerminalPreset(id: "ghostty", label: "Ghostty", appName: "Ghostty", bundleID: "com.mitchellh.ghostty", supportsTabs: false, detected: appExists("Ghostty"))
+        ]
+    }
+
+    private static func appExists(_ name: String) -> Bool {
+        let paths = [
+            "/Applications/\(name).app",
+            FileManager.default.homeDirectoryForCurrentUser.appending(path: "Applications/\(name).app").path
+        ]
+        return paths.contains { FileManager.default.fileExists(atPath: $0) }
+    }
 }

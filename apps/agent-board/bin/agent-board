@@ -14,17 +14,42 @@ done
 
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+INVOCATION_DIR="$PWD"
+INITIAL_PATH="${1:-$INVOCATION_DIR}"
 APP_BUNDLE="$APP_DIR/.build/AgentBoard.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
-EXECUTABLE="$APP_DIR/.build/debug/AgentBoard"
+RESOURCES_DIR="$CONTENTS_DIR/Resources"
+BINARY="$APP_DIR/.build/debug/AgentBoard"
+ICON_FILE="$APP_DIR/Resources/AgentBoard.icns"
 
 cd "$APP_DIR"
 
 swift build --disable-sandbox >/dev/null
 
-mkdir -p "$MACOS_DIR"
-ln -sf "$EXECUTABLE" "$MACOS_DIR/AgentBoard"
+mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
+rm -f "$MACOS_DIR/AgentBoard" "$MACOS_DIR/AgentBoardBinary"
+cp "$BINARY" "$MACOS_DIR/AgentBoardBinary"
+if [ -f "$ICON_FILE" ]; then
+  cp "$ICON_FILE" "$RESOURCES_DIR/AgentBoard.icns"
+fi
+AGENT_BOARD_HOME_VALUE="${AGENT_BOARD_HOME:-}"
+AGENT_BOARD_INITIAL_PATH_VALUE=""
+if [ -n "$INITIAL_PATH" ] && [ "$INITIAL_PATH" != "$APP_DIR" ]; then
+  AGENT_BOARD_INITIAL_PATH_VALUE="$INITIAL_PATH"
+fi
+cat > "$MACOS_DIR/AgentBoard" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+if [ -n "$AGENT_BOARD_HOME_VALUE" ]; then
+  export AGENT_BOARD_HOME="$AGENT_BOARD_HOME_VALUE"
+fi
+if [ -n "$AGENT_BOARD_INITIAL_PATH_VALUE" ]; then
+  export AGENT_BOARD_INITIAL_PATH="$AGENT_BOARD_INITIAL_PATH_VALUE"
+fi
+exec "$MACOS_DIR/AgentBoardBinary" "\$@"
+EOF
+chmod +x "$MACOS_DIR/AgentBoard"
 
 cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -40,6 +65,8 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
+  <string>AgentBoard</string>
+  <key>CFBundleIconFile</key>
   <string>AgentBoard</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>

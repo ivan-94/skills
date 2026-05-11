@@ -16,6 +16,10 @@ let package = Package(
             swiftSettings: [
                 .enableUpcomingFeature("ExistentialAny")
             ]
+        ),
+        .testTarget(
+            name: "AgentBoardTests",
+            dependencies: ["AgentBoard"]
         )
     ]
 )

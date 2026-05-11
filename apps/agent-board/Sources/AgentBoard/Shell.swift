@@ -72,15 +72,28 @@ struct GitHubRemote {
 }
 
 func parseGitHubRemote(_ url: String) -> String? {
-    if url.hasPrefix("git@github.com:") {
-        let rest = String(url.dropFirst("git@github.com:".count))
-        return rest.replacingOccurrences(of: ".git", with: "")
+    let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
+    let prefixes = [
+        "git@github.com:",
+        "ssh://git@github.com/",
+        "https://github.com/",
+        "http://github.com/",
+        "git://github.com/"
+    ]
+    guard let prefix = prefixes.first(where: { trimmed.hasPrefix($0) }) else { return nil }
+    var rest = String(trimmed.dropFirst(prefix.count))
+    if rest.hasSuffix(".git") {
+        rest.removeLast(4)
     }
-    if url.hasPrefix("https://github.com/") {
-        let rest = String(url.dropFirst("https://github.com/".count))
-        return rest.replacingOccurrences(of: ".git", with: "")
-    }
-    return nil
+    let parts = rest.split(separator: "/").map(String.init)
+    guard parts.count >= 2 else { return nil }
+    return "\(parts[0])/\(parts[1])"
+}
+
+func parseGitHubRemoteLine(_ line: String) -> GitHubRemote? {
+    let parts = line.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+    guard parts.count >= 2, let slug = parseGitHubRemote(parts[1]) else { return nil }
+    return GitHubRemote(name: parts[0], url: parts[1], slug: slug)
 }
 
 func sha1Hex(_ value: String) -> String {

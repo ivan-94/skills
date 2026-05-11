@@ -122,4 +122,65 @@ struct GitHubService {
             )
         }
     }
+
+    func updateLabel(slug: String, itemType: ItemType, number: Int, action: LabelAction, label: String) async throws {
+        let command = itemType == .issue ? "issue" : "pr"
+        let flag = action == .add ? "--add-label" : "--remove-label"
+        var result = try await Shell.run([
+            "/usr/bin/env",
+            "gh",
+            command,
+            "edit",
+            String(number),
+            "--repo",
+            slug,
+            flag,
+            label
+        ])
+
+        if result.exitCode != 0, action == .add, labelMissing(result.stderr.isEmpty ? result.stdout : result.stderr, label: label) {
+            try await createLabel(slug: slug, label: label)
+            result = try await Shell.run([
+                "/usr/bin/env",
+                "gh",
+                command,
+                "edit",
+                String(number),
+                "--repo",
+                slug,
+                flag,
+                label
+            ])
+        }
+
+        guard result.exitCode == 0 else {
+            throw AgentBoardError.commandFailed("gh \(command) edit \(number)", result.stderr.isEmpty ? result.stdout : result.stderr)
+        }
+    }
+
+    func createLabel(slug: String, label: String) async throws {
+        let result = try await Shell.run([
+            "/usr/bin/env",
+            "gh",
+            "label",
+            "create",
+            label,
+            "--repo",
+            slug,
+            "--color",
+            "ededed"
+        ])
+        if result.exitCode != 0, !labelAlreadyExists(result.stderr.isEmpty ? result.stdout : result.stderr) {
+            throw AgentBoardError.commandFailed("gh label create \(label)", result.stderr.isEmpty ? result.stdout : result.stderr)
+        }
+    }
+
+    private func labelMissing(_ output: String, label: String) -> Bool {
+        output.contains("'\(label)' not found") || output.contains("\"\(label)\" not found")
+    }
+
+    private func labelAlreadyExists(_ output: String) -> Bool {
+        let normalized = output.lowercased()
+        return normalized.contains("already exists") || normalized.contains("already_exists")
+    }
 }

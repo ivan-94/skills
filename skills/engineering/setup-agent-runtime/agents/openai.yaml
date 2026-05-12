@@ -1,0 +1,4 @@
+interface:
+  display_name: "Setup Agent Runtime"
+  short_description: "Build isolated Agent sandboxes for Compose projects"
+  default_prompt: "Set up an Agent Runtime for this Compose/devcontainer project with isolated worktrees, dynamic ports, a project-local CLI, docs, and cleanup-safe validation."

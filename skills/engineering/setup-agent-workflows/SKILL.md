@@ -1,39 +1,42 @@
 ---
 name: setup-agent-workflows
-description: 为多智能体工程协作搭建可选的项目级工作流编排文档。在仓库需要共享的智能体工作流地图、交接/来源清单规则，或关于 PRD、issue、HAT、review、PR 链的持久化约定时使用。
+description: 为多智能体工程协作搭建可选的项目级或用户级工作流编排文档。在仓库或用户目录需要共享智能体工作流地图、交接/来源清单规则，或关于 PRD、issue、HAT、review、PR 链的持久化约定时使用。
 ---
 
 # 搭建智能体工作流（Setup Agent Workflows）
 
-为长期运行或多智能体工程工作搭建可选的项目级工作流指引。本技能不替代也不依赖 `/setup-matt-pocock-skills`；它增加一份任意智能体在产出持久化产物或向下游交接前都可阅读的共享工作流地图与交接策略。
+为长期运行或多智能体工程工作搭建可选的工作流指引。本技能不替代也不依赖 `/setup-matt-pocock-skills`；它增加一份任意智能体在产出持久化产物或向下游交接前都可阅读的共享工作流地图与交接策略。默认推荐写入用户目录，以便与多人协作项目隔离；也可按用户确认写入本地项目，形成仓库共享约定。
 
 ## 流程
 
-### 1. 探索
+### 1. 确认写入位置
 
-起草前先检视仓库：
+起草前先向用户确认写入位置，并推荐**用户目录**：
 
-- 仓库根目录下已有的智能体说明文件，尤其是 `AGENTS.md` 与 `CLAUDE.md`。
-- 已有的 `docs/agents/` 下文件。
-- README、包文档及可见的工作流约定。
-- 当前技能列表、README 或插件元数据中可用的技能。
-- 项目文档所使用的主要语言。
+- **用户目录（推荐）**：写入 `~/.agents/docs/agents/workflows.md` 与 `~/.agents/docs/agents/handoff-policy.md`，并更新 `~/.claude/CLAUDE.md` 与 `~/.codex/AGENTS.md` 的简短指针。此模式用于跨项目共享个人偏好，并与多人协作项目隔离。
+- **本地项目**：写入当前仓库的 `docs/agents/workflows.md`、`docs/agents/handoff-policy.md`，并更新仓库根目录已有的 `AGENTS.md` / `CLAUDE.md` 指针。此模式用于团队希望共享同一套仓库工作流约定。
 
-若不存在 `AGENTS.md` 或 `CLAUDE.md`，询问要创建哪一个。若已存在一个或两个，用同一段简短的「活跃指针」更新每一个已有文件。
+确认后，将后续流程中的变量设为：
 
-### 2. 起草
+| 模式 | `<docs-root>` | `<pointer-files>` |
+| --- | --- | --- |
+| 用户目录 | `~/.agents/docs/agents` | `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md` |
+| 本地项目 | `docs/agents` | 仓库根目录已有的 `AGENTS.md` / `CLAUDE.md` |
 
-起草下列项目文档：
+若选择本地项目且仓库根目录没有 `AGENTS.md` 或 `CLAUDE.md`，询问要创建哪一个；若已有一个或两个，只更新已有文件。
 
-```text
-docs/agents/
-  workflows.md
-  handoff-policy.md
-```
+### 2. 探索
 
-生成文档时使用仓库文档所使用的主要语言。详细规则放在 `docs/agents/*.md`；根目录的智能体说明文件保持简短。
+根据已选位置检视上下文：
 
-`workflows.md` 应包含分层的推荐链路：
+- 用户目录：检查 `~/.agents/docs/agents/`、`~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`，并参考当前对话语言。
+- 本地项目：检查仓库根目录智能体说明文件、已有 `docs/agents/`、README、包文档、可见工作流约定、技能列表、项目文档语言。
+
+### 3. 起草
+
+起草 `<docs-root>/workflows.md` 与 `<docs-root>/handoff-policy.md`。用户目录模式使用用户当前对话或既有用户级文档的主要语言；本地项目模式使用仓库文档的主要语言。`<pointer-files>` 只放简短指针。
+
+`workflows.md` 包含分层推荐链路：
 
 - 澄清：`/grill-me` 或 `/grill-with-docs` -> 可选 `/prototype` -> `/to-prd`。
 - 规划：`/to-prd` -> `/to-issues` -> `/triage`。
@@ -50,7 +53,7 @@ docs/agents/
    - 后端 HAT 友好化改造： `/hat-backend-friendly`
 - 跨智能体连续性：持久化产物保留可重读的来源引用。
 
-`handoff-policy.md` 应为跨智能体持久化产物规定必需的**来源清单（Source Manifest）**，适用于：
+`handoff-policy.md` 为跨智能体持久化产物规定必需的**来源清单（Source Manifest）**，适用于：
 
 - PRD。
 - Issue 或智能体简报。
@@ -69,30 +72,32 @@ docs/agents/
 
 将该策略规定为**持久化产物**的硬性要求，而非每次简短聊天回复都要遵守。
 
-### 3. 展示与确认
-
-向用户展示：
-
-- 要新增或更新的智能体说明段落。
-- 计划写入的 `docs/agents/workflows.md` 内容。
-- 计划写入的 `docs/agents/handoff-policy.md` 内容。
-
-除非用户明确说要立即应用本搭建，否则先征求确认再写入。
-
-### 4. 写入
-
-创建或更新 `docs/agents/workflows.md` 与 `docs/agents/handoff-policy.md`。
-
-在每个已有的根目录智能体说明文件中，新增或更新一节简明内容：
+指针章节使用同一模板，写入时将 `<docs-root>` 替换为实际路径：
 
 ```markdown
 ## Agent workflows
 
-在创建 PRD、issue、HAT 产物、审查报告、PR，或将工作交给其他智能体之前，请先阅读 `docs/agents/workflows.md` 与 `docs/agents/handoff-policy.md`。持久化产物必须保留其来源清单（Source Manifest），以便下游智能体重读原始来源，而非仅依赖摘要。
+在创建 PRD、issue、HAT 产物、审查报告、PR，或将工作交给其他智能体之前，请先阅读 `<docs-root>/workflows.md` 与 `<docs-root>/handoff-policy.md`。持久化产物必须保留其来源清单（Source Manifest），以便下游智能体重读原始来源，而非仅依赖摘要。
 ```
 
-若已有等价章节，就地更新，勿追加重复段落。不要覆盖与用户撰写的无关内容。
+### 4. 展示与确认
 
-### 5. 完成
+向用户展示：
+
+- 已确认的写入位置：本地项目或用户目录。
+- `<docs-root>/workflows.md` 与 `<docs-root>/handoff-policy.md` 的计划内容。
+- `<pointer-files>` 中要新增或更新的指针章节。
+
+除非用户明确说要立即应用本搭建，否则先征求确认再写入。
+
+### 5. 写入
+
+- 创建或更新 `<docs-root>/workflows.md` 与 `<docs-root>/handoff-policy.md`。
+- 创建或更新 `<pointer-files>` 中的 `## Agent workflows` 章节。
+- 若已有等价章节，就地更新，勿追加重复段落。
+- 保留用户撰写的无关内容。
+- 用户目录模式不修改当前仓库的 `docs/agents/`、`AGENTS.md` 或 `CLAUDE.md`，除非用户另外明确要求。
+
+### 6. 完成
 
 汇报已写入的文件与当前可用的一致工作流约定。说明本搭建为可选，且独立于 `/setup-matt-pocock-skills`。

@@ -53,13 +53,13 @@ description: 为多智能体工程协作搭建可选的项目级或用户级工�
    - 后端 HAT 友好化改造： `/hat-backend-friendly`
 - 跨智能体连续性：持久化产物保留可重读的来源引用。
 
-`handoff-policy.md` 为跨智能体持久化产物规定必需的**来源清单（Source Manifest）**，适用于：
+`handoff-policy.md` 为以下跨智能体持久化产物规定必需的**来源清单（Source Manifest）**：
 
 - PRD。
-- Issue 或智能体简报。
-- HAT 指南与 HAT 报告。
+- Issue Slice。
+- HAT prepare guide。
 - PR 正文。
-- 交叉 review 或代码审查报告。
+- 交叉 review Prompt。
 - 显式交接文档。
 
 来源清单必须包含：
@@ -70,14 +70,18 @@ description: 为多智能体工程协作搭建可选的项目级或用户级工�
 - `Verification evidence` —— 命令、测试、报告、HAT 结果、review 日志，或明确说明未执行的原因。
 - `Open questions / risks` —— 未决事项、阻塞项、已知风险，以及建议的下一步工作流。
 
-将该策略规定为**持久化产物**的硬性要求，而非每次简短聊天回复都要遵守。
+将该策略规定为上述产物的硬性要求，而非每次简短聊天回复或所有持久化产物都要遵守。
 
-指针章节使用同一模板，写入时将 `<docs-root>` 替换为实际路径：
+指针章节分为两个部分，写入时将 `<docs-root>` 替换为实际路径：
 
 ```markdown
 ## Agent workflows
 
-在创建 PRD、issue、HAT 产物、审查报告、PR，或将工作交给其他智能体之前，请先阅读 `<docs-root>/workflows.md` 与 `<docs-root>/handoff-policy.md`。持久化产物必须保留其来源清单（Source Manifest），以便下游智能体重读原始来源，而非仅依赖摘要。
+Agent 开发流程链路建议请阅读 `<docs-root>/workflows.md`。这些链路用于选择合适的 Skill 组合，属于建议而非强制流程。
+
+## Agent handoff
+
+流程协作交接规范请阅读 `<docs-root>/handoff-policy.md`。在创建 PRD、Issue Slice、HAT prepare guide、PR 正文、交叉 review Prompt，或显式交接文档时，这些产物必须保留其来源清单（Source Manifest），以便下游智能体重读原始来源，而非仅依赖摘要。
 ```
 
 ### 4. 展示与确认
@@ -86,14 +90,14 @@ description: 为多智能体工程协作搭建可选的项目级或用户级工�
 
 - 已确认的写入位置：本地项目或用户目录。
 - `<docs-root>/workflows.md` 与 `<docs-root>/handoff-policy.md` 的计划内容。
-- `<pointer-files>` 中要新增或更新的指针章节。
+- `<pointer-files>` 中要新增或更新的流程指针与交接指针章节。
 
 除非用户明确说要立即应用本搭建，否则先征求确认再写入。
 
 ### 5. 写入
 
 - 创建或更新 `<docs-root>/workflows.md` 与 `<docs-root>/handoff-policy.md`。
-- 创建或更新 `<pointer-files>` 中的 `## Agent workflows` 章节。
+- 创建或更新 `<pointer-files>` 中的 `## Agent workflows` 与 `## Agent handoff` 章节。
 - 若已有等价章节，就地更新，勿追加重复段落。
 - 保留用户撰写的无关内容。
 - 用户目录模式不修改当前仓库的 `docs/agents/`、`AGENTS.md` 或 `CLAUDE.md`，除非用户另外明确要求。

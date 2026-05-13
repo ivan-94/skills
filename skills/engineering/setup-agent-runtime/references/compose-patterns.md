@@ -165,7 +165,7 @@ volumes:
 ```text
 compose up -d --build
 wait dependency health
-.agent-runtime/bin/project migrate up
+.agent/bin/project migrate up
 ```
 
 要求：
@@ -201,4 +201,4 @@ AGENTS.md
 - `9000/9100/1024` -> 目标项目服务端口。
 - Maven/npm cache -> 目标项目包管理器 cache。
 - MySQL/Redis -> 目标项目实际依赖服务。
-- `.devcontainer/project.sh` -> `.agent-runtime/bin/project`，必要时由后者转调已有脚本。
+- `.devcontainer/project.sh` -> `.agent/bin/project`，必要时由后者转调已有脚本。

@@ -19,6 +19,7 @@ Reachable only when you type them (`disable-model-invocation: true`).
 
 Model- or user-reachable (rich trigger phrasing so the model can reach for them).
 
+- **[agent-context-audit](./agent-context-audit/SKILL.md)** — 审计新 Agent 会话的上下文来源、指令冲突、运行/测试认知、HAT 引导和交接规则。
 - **[create-pr](./create-pr/SKILL.md)** — Create or update a GitHub PR with issue linkage, TDD/test evidence, existing HAT results, and reviewer-facing delivery notes.
 - **[cross-review](./cross-review/SKILL.md)** — Invoke the opposite CLI for a read-only independent code review: Codex calls Claude Code, Claude Code calls Codex, with P0/P1/P2 findings and no P3 noise.
 - **[deliver-issue](./deliver-issue/SKILL.md)** — Deliver GitHub issues through TDD, cross-review, HAT preparation, and a Draft PR labeled `HAT-Ready`.

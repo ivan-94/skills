@@ -9,9 +9,8 @@
 ```text
 .agent/
   bin/agent
-  runtime.yml
-.agent-runtime/
   bin/project
+  runtime.yml
 .devcontainer/
   docker-compose.base.yml
   docker-compose.dev.yml
@@ -47,7 +46,7 @@ runtime:
     - .devcontainer/docker-compose.agent.yml
   app_service: app
   workspace_dir: /workspace
-  project_command: .agent-runtime/bin/project
+  project_command: .agent/bin/project
 
 caches:
   shared:
@@ -76,13 +75,19 @@ services:
     host_env: MYSQL_HOST_PORT
     url: 127.0.0.1:{port}
     docker_service: mysql
+  worker:
+    docker_service: worker
+    command: queue worker
+    log_name: docker:worker
 ```
 
 字段要求：
 
 - `services` 必须显式声明端口、URL、health 和日志映射；不要靠 Agent 猜。
+- 没有端口的 worker/scheduler 服务也要显式声明 `docker_service`、启动意图和日志入口，例如 Celery、Sidekiq、queue worker、cron/beat。
 - `{port}` 使用最终分配的 host port 渲染。
 - `host_env` 用于写入 `.agent/runs/<id>/agent.env`，再由 Compose agent overlay 读取。
+- `runtime.project_command` 使用 `.agent/bin/project`，与宿主机 CLI 一起放在 `.agent/bin/` 下。
 - secret 不进入 `runtime.yml` 示例或 manifest；只引用 `.env*`、env file 或外部 secret 管理。
 
 ## CLI Commands
@@ -118,7 +123,7 @@ services:
 - 创建共享下载缓存卷。
 - 使用 `docker compose --env-file .agent/runs/<id>/agent.env -p <composeProject> -f ... up -d --build`。
 - 等待依赖服务 health。
-- 默认执行容器内 migration：`/workspace/.agent-runtime/bin/project migrate up`。
+- 默认执行容器内 migration：`/workspace/.agent/bin/project migrate up`。
 - 文档和 help 必须说明 `up` 有 DB side effect。
 
 ### `exec`
@@ -139,10 +144,10 @@ services:
 映射到容器内协议：
 
 ```bash
-.agent-runtime/bin/project start [all|service-id]
-.agent-runtime/bin/project stop [all|service-id]
-.agent-runtime/bin/project migrate up|status
-.agent-runtime/bin/project wait [all|service-id]
+.agent/bin/project start [all|service-id]
+.agent/bin/project stop [all|service-id]
+.agent/bin/project migrate up|status
+.agent/bin/project wait [all|service-id]
 ```
 
 要求：
@@ -216,16 +221,16 @@ services:
 
 ## Container Project Command
 
-`.agent-runtime/bin/project` 在容器内运行，负责业务进程，不负责 Docker Compose。
+`.agent/bin/project` 在容器内运行，负责业务进程，不负责 Docker Compose。
 
 必备命令：
 
 ```bash
-.agent-runtime/bin/project start [all|service-id]
-.agent-runtime/bin/project stop [all|service-id]
-.agent-runtime/bin/project migrate up|status
-.agent-runtime/bin/project wait [all|service-id]
-.agent-runtime/bin/project status
+.agent/bin/project start [all|service-id]
+.agent/bin/project stop [all|service-id]
+.agent/bin/project migrate up|status
+.agent/bin/project wait [all|service-id]
+.agent/bin/project status
 ```
 
 约定：
@@ -234,4 +239,26 @@ services:
 - `LOG_DIR` 默认 `/agent/logs`；agent Compose overlay 将其挂到宿主 `.agent/runs/<id>/logs`。
 - 启动长期进程时写 pid 和 log，例如 `$LOG_DIR/admin.pid`、`$LOG_DIR/admin.log`。
 - 停止逻辑应按 pid、工作目录、端口三层兜底，保证 `start` 可重复执行。
-- 可以复用已有 devcontainer 脚本，但对外协议路径保持 `.agent-runtime/bin/project`。
+- 可以复用已有 devcontainer 脚本，但对外协议路径保持 `.agent/bin/project`。
+
+## Optional Project Commands
+
+基础命令之外，可以按项目添加高价值辅助入口，帮助 Agent 少记连接细节、少污染宿主机：
+
+```bash
+.agent/bin/agent compile --id check-my-task
+.agent/bin/agent debug --id check-my-task [service-id]
+.agent/bin/agent mysql --id check-my-task -- -e "select 1"
+.agent/bin/agent psql --id check-my-task -- -c "select 1"
+.agent/bin/agent celery --id check-my-task -- inspect ping
+.agent/bin/agent queue --id check-my-task -- status
+.agent/bin/agent make-migration --worktree . -m add_example_table
+```
+
+设计原则：
+
+- Optional commands 必须仍通过 sandbox 容器执行，不直接连宿主机或共享 Dev Container。
+- DB/queue 命令可以内置 sandbox service、database、app name 等非 secret 默认值；真实 secret 仍从容器环境注入。
+- `debug` 可以暴露 debugpy、JDWP、Node inspector 等调试端口，但 host port 仍由 `init` 动态分配并写入 manifest。
+- `make-migration` / autogenerate 应创建临时 sandbox，先应用已有迁移，再生成 diff，结束后默认清理；提供 `--keep` 仅用于保留失败现场。
+- 文档中把这些命令标为项目扩展，不要让没有对应栈的项目照抄。

@@ -160,6 +160,7 @@ Skills I use daily for code work.
 
 **Model-invoked**
 
+- **[agent-context-audit](./skills/engineering/agent-context-audit/SKILL.md)** — 审计新 Agent 会话的上下文来源、指令冲突、运行/测试认知、HAT 引导和交接规则。
 - **[create-pr](./skills/engineering/create-pr/SKILL.md)** — Create or update a GitHub PR with issue linkage, TDD/test evidence, existing HAT results, and reviewer-facing delivery notes.
 - **[cross-review](./skills/engineering/cross-review/SKILL.md)** — Invoke the opposite CLI for a read-only independent code review: Codex calls Claude Code, Claude Code calls Codex, with P0/P1/P2 findings and no P3 noise.
 - **[deliver-issue](./skills/engineering/deliver-issue/SKILL.md)** — Deliver GitHub issues through TDD, cross-review, HAT preparation, and a Draft PR labeled `HAT-Ready`.

@@ -65,6 +65,14 @@ State:
 ### down
 ### clean
 
+## Optional Commands
+
+### compile
+### debug
+### db / mysql / psql
+### queue / celery
+### make-migration
+
 ## Common Workflows
 
 ### Compile or Unit Test
@@ -105,6 +113,7 @@ State:
 
 ```bash
 .agent/bin/agent --help
+.agent/bin/project --help
 .agent/bin/agent init --id smoke-agent-runtime --worktree .
 .agent/bin/agent status --id smoke-agent-runtime --json
 .agent/bin/agent up --id smoke-agent-runtime
@@ -142,6 +151,7 @@ docker compose --env-file .agent/runs/smoke-agent-runtime/agent.env \
 
 - `AGENTS.md` 告诉 Agent 不要在宿主或人类 Dev Container 里跑自动检查。
 - `docs/agent-runtime-cli.md` 覆盖全部 CLI 命令和 cleanup 语义。
+- optional commands 是项目扩展参考，不强制所有项目实现。
 - `runtime.yml` 的 service ids、ports、URLs、health、logs 与项目实际一致。
 - human dev Compose 仍可用，固定端口和 container name 未被 agent overlay 破坏。
 - agent Compose 无固定 `container_name`，无固定 host port，使用 `${WORKTREE_PATH}`。

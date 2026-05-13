@@ -2,6 +2,7 @@
   "name": "mattpocock-skills",
   "skills": [
     "./skills/engineering/ask-matt",
+    "./skills/engineering/agent-context-audit",
     "./skills/engineering/create-pr",
     "./skills/engineering/cross-review",
     "./skills/engineering/diagnosing-bugs",

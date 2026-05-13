@@ -1,6 +1,6 @@
 ---
 name: setup-agent-runtime
-description: 为已有 Docker Compose 或 Dev Container 项目搭建适合并发 Agent 开发、HAT、browser acceptance 和自动检查的隔离运行环境，同时保留人类开发体验。Use when the user wants an Agent Runtime, isolated worktrees, dynamic Compose sandboxes, `.agent/bin/agent`, `.agent-runtime/bin/project`, devcontainer-to-agent-runtime refactoring, or concurrent agent execution environments.
+description: 为已有 Docker Compose 或 Dev Container 项目搭建适合并发 Agent 开发、HAT、browser acceptance 和自动检查的隔离运行环境，同时保留人类开发体验。Use when the user wants an Agent Runtime, isolated worktrees, dynamic Compose sandboxes, `.agent/bin/agent`, `.agent/bin/project`, devcontainer-to-agent-runtime refactoring, or concurrent agent execution environments.
 ---
 
 # Setup Agent Runtime
@@ -13,7 +13,7 @@ description: 为已有 Docker Compose 或 Dev Container 项目搭建适合并发
 
 - v1 只默认支持已有 Docker Compose 或 Dev Container 的项目；不要从零替项目发明开发环境。
 - 默认交付模板化落地，不使用黑盒生成器，不依赖全局机器工具。
-- 默认提交项目内协议文件：`.agent/bin/agent`、`.agent/runtime.yml`、`.agent-runtime/bin/project`、Compose overlays、`docs/agent-runtime-cli.md`、`AGENTS.md` 入口。
+- 默认提交项目内协议文件：`.agent/bin/agent`、`.agent/bin/project`、`.agent/runtime.yml`、Compose overlays、`docs/agent-runtime-cli.md`、`AGENTS.md` 入口。
 - 默认忽略运行态：`.agent/runs/`、`.agent/worktrees/`、logs、artifacts、generated env/manifest。
 - 不把 secret 写入 manifest、status、docs、PR/HAT 报告；真实 secret 留在 `.env*` 或用户注入环境中。
 - 不破坏人类 Dev Container。人类 runtime 保留固定端口和容器名；Agent runtime 使用动态端口、隔离 Compose project 和独立状态。
@@ -27,9 +27,10 @@ description: 为已有 Docker Compose 或 Dev Container 项目搭建适合并发
 - 读取 `.devcontainer/`、`docker-compose*`、`Dockerfile*`、`devcontainer.json`、`.env.example`、`.env.*.example`。
 - 识别人类开发入口：Compose 文件组合、固定端口、container name、VS Code attach、volume、cache、post-create/post-start。
 - 识别服务表：长期业务服务、依赖服务、端口、URL path、health endpoint、日志路径、启动/停止/等待命令。
+- 识别 worker/queue/scheduler 服务：是否有无端口的后台 worker、定时任务、队列消费者，以及它们的日志和诊断入口。
 - 识别迁移/seed/cleanup：migration 脚本、schema 初始化、测试数据准备、DB/Redis/MQ 依赖。
 - 识别缓存和状态：Maven/Gradle/npm/pnpm/yarn cache、`node_modules`、数据库卷、Redis 数据、artifacts。
-- 检查是否已有 `.agent/`、`.agent-runtime/`、`.scratch/agent-*`、HAT 产物或项目级 agent 文档。
+- 检查是否已有 `.agent/`、`.scratch/agent-*`、HAT 产物或项目级 agent 文档。
 
 多候选服务无法判断时，只问真正阻塞的问题，并给出推荐默认。
 
@@ -41,6 +42,7 @@ description: 为已有 Docker Compose 或 Dev Container 项目搭建适合并发
 - Compose 分层：base/dev/agent 文件名、服务继承关系、人类 runtime 保留点、Agent runtime 隔离点。
 - `.agent/runtime.yml` 的服务表：service id、container port、host env var、URL、health、log name。
 - CLI 命令面：`init/up/exec/start/stop/migrate/wait/status/logs/down/clean` 如何映射到项目命令。
+- 可选扩展命令：是否需要 `compile`、`debug`、`mysql/psql`、`celery/queue`、`make-migration` 等项目辅助入口。
 - `up` 是否自动迁移；默认是自动迁移，并在计划和文档中明确 DB side effect。
 - cache/state 策略：哪些 cache 共享，哪些数据卷和安装产物按 sandbox 隔离。
 - 验证命令：默认至少覆盖 help、init、status --json、up、安全 exec、down、clean。
@@ -54,7 +56,7 @@ description: 为已有 Docker Compose 或 Dev Container 项目搭建适合并发
 1. **搭建项目协议**
    - 新增 `.agent/runtime.yml` 声明静态契约。
    - 新增或更新 `.agent/bin/agent` 作为宿主机 sandbox 管理 CLI。
-   - 新增 `.agent-runtime/bin/project` 作为容器内业务运行协议；可以转调已有 devcontainer 脚本。
+   - 新增或更新 `.agent/bin/project` 作为容器内业务运行协议；可以转调已有 devcontainer 脚本。
    - 更新 `.gitignore`，提交协议文件，忽略 `.agent/runs/` 和 `.agent/worktrees/`。
 
 2. **拆 Compose 层**
@@ -71,6 +73,7 @@ description: 为已有 Docker Compose 或 Dev Container 项目搭建适合并发
    - `status --json` 输出机器可读 manifest 和 compose 状态。
    - `logs` 既支持 Docker service logs，也支持项目 process logs。
    - `clean` 清理 sandbox Docker state；`--all` 可清理 run dir 和 CLI 创建的 worktree。
+   - 项目诊断价值高时，添加可选辅助命令，例如 DB client、queue CLI、debug server、compile、migration authoring。
 
 4. **写项目文档**
    - `AGENTS.md` 只放强约束和最短命令入口，指向 `docs/agent-runtime-cli.md`。

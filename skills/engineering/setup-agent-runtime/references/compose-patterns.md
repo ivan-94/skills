@@ -78,6 +78,19 @@ volumes:
 
 这层可以使用固定 container name 和固定端口，因为它服务单个人类开发会话。
 
+## Dev Container Port Policy
+
+如果项目使用 `devcontainer.json`，不要同时用 Dev Container port forwarding 和 Compose `ports` 暴露同一个服务端口。
+
+推荐规则：
+
+- 宿主端口暴露以 Compose `ports` 为准。
+- 如果 `docker-compose.dev.yml` 已有 `9000:9000`、`1024:1024` 等映射，删除 `devcontainer.json` 中对应的 `forwardPorts` 或旧式 `appPort`。
+- `portsAttributes` 可以只保留非转发元数据；不要依赖它再触发相同端口的自动转发。
+- Agent runtime 不依赖 VS Code port forwarding；agent overlay 的端口全部由 `.agent/bin/agent init` 写入 `agent.env`。
+
+原因：Compose 端口发布和 VS Code port forwarding 都会尝试占用宿主端口；重复声明会造成端口抢占、启动失败或 URL 指向不稳定。
+
 ## Agent Overlay
 
 `agent` 使用 `.agent/runs/<id>/agent.env` 注入变量。

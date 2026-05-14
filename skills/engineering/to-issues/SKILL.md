@@ -56,6 +56,18 @@ For each approved slice, publish a new issue to the issue tracker. Use the issue
 
 Publish issues in dependency order (blockers first) so you can reference real issue identifiers in the "Blocked by" field.
 
+When the source is a GitHub PRD issue, add each created slice as a GitHub sub-issue of that parent PRD. Keep the `## Parent` section in the issue body as a readable fallback; the sub-issue relationship is the machine-readable hierarchy.
+
+Use GitHub CLI through `gh api` after creating each slice issue:
+
+```bash
+SUB_ISSUE_ID="$(gh api "repos/{owner}/{repo}/issues/<child-issue-number>" --jq .id)"
+gh api -X POST "repos/{owner}/{repo}/issues/<parent-prd-number>/sub_issues" \
+  -F "sub_issue_id=$SUB_ISSUE_ID"
+```
+
+If adding the sub-issue relationship fails because the API, permissions, or repository settings do not support it, keep the created issues, preserve their `## Parent` references, and report the blocker instead of silently relying on mentions.
+
 <issue-template>
 ## Parent
 
@@ -81,4 +93,4 @@ Or "None - can start immediately" if no blockers.
 
 </issue-template>
 
-Do NOT close or modify any parent issue.
+Do NOT close or otherwise modify any parent issue, except for adding the approved GitHub sub-issue relationship described above.

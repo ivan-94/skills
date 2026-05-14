@@ -164,6 +164,7 @@ Skills I use daily for code work.
 - **[create-pr](./skills/engineering/create-pr/SKILL.md)** — Create or update a GitHub PR with issue linkage, TDD/test evidence, existing HAT results, and reviewer-facing delivery notes.
 - **[cross-review](./skills/engineering/cross-review/SKILL.md)** — Invoke the opposite CLI for a read-only independent code review: Codex calls Claude Code, Claude Code calls Codex, with P0/P1/P2 findings and no P3 noise.
 - **[deliver-issue](./skills/engineering/deliver-issue/SKILL.md)** — Deliver GitHub issues through TDD, cross-review, HAT preparation, and a Draft PR labeled `HAT-Ready`.
+- **[deliver-prd](./skills/engineering/deliver-prd/SKILL.md)** — 通过父 Agent 编排多个子 Slice 交付 GitHub PRD：独立 worktree、TDD、集成、cross-review、HAT 准备和标记 `HAT-Ready` 的 Draft PR。
 - **[diagnosing-bugs](./skills/engineering/diagnosing-bugs/SKILL.md)** — Disciplined diagnosis loop for hard bugs and performance regressions: reproduce → minimise → hypothesise → instrument → fix → regression-test.
 - **[hat-dispatch](./skills/engineering/hat-dispatch/SKILL.md)** — Dispatch HAT runs for GitHub PRs labeled `HAT-Ready`, using isolated sub-agents and PR label/comment writeback.
 - **[hat-backend-friendly](./skills/engineering/hat-backend-friendly/SKILL.md)** — Diagnose backend services for Agent-friendly HAT readiness, with a Chinese doctor-style report and low-intrusion improvement plan.

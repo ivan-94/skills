@@ -89,6 +89,14 @@ flowchart TD
 
 若某个 Slice 失败，保留它的 worktree、分支、日志和 summary。不要启动依赖它的 Slice，但可以继续无依赖的执行 wave。在所有 confirmed Slice 成功前，不进入最终 cross-review、HAT 准备或 PR。
 
+## 子 Agent 生命周期
+
+- 子 Agent 只在调度计划通过 review 后创建；有依赖的 Slice 只能在 blocker 已合入父集成分支后创建。
+- 一个子 Agent 对应一个 Slice、一个 Slice 分支、一个独立 worktree，以及可选(支持时必须强制)的 Agent Runtime sandbox。父 Agent 需要记录它的身份、worktree、分支、运行态和当前状态。
+- 子 Agent 完成首次实现后不要自行结束交接；它应保持可召回，直到父 Agent 完成结果审查并决定通过、返工或阻塞。
+- 如果父 Agent 审查发现 P0、未满足验收标准或明确属于该 Slice 的缺陷，优先让同一个子 Agent 在同一 worktree/分支追加修复 commit。
+- Slice 通过审查、合入父分支并完成必要的集成验证后，父 Agent 才能结束该子 Agent。若使用 Agent Runtime，结束前通知子 Agent 在其 worktree 中停止并清理运行态。
+- 失败或阻塞的 Slice 保留 worktree、分支、日志和 summary 作为证据；可以停止运行态以释放资源，但不要清理可复盘的交付现场。
 
 ## 父级审查与集成
 
@@ -101,9 +109,6 @@ flowchart TD
 通过审查的 Slice 默认使用 `git merge --no-ff` 合并进父分支，以保留子 Agent 交付边界。父 Agent 负责 merge conflict 和 integration failure。若失败明显属于单个 Slice，将证据退回该子 Agent；若多个 Slice 暴露设计冲突，停止并等待用户 review。
 
 风险较高时，在每个依赖 wave 或每次合并后运行合适的集成测试。
-
-完成合入后，如果 Sub Agent 使用了 Agent Runtime，则需要通知 Agent Runtime 停止和清理。
-
 
 ## 最终门禁
 

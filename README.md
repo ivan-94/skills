@@ -168,6 +168,7 @@ Skills I use daily for code work.
 - **[diagnosing-bugs](./skills/engineering/diagnosing-bugs/SKILL.md)** — Disciplined diagnosis loop for hard bugs and performance regressions: reproduce → minimise → hypothesise → instrument → fix → regression-test.
 - **[hat-dispatch](./skills/engineering/hat-dispatch/SKILL.md)** — Dispatch HAT runs for GitHub PRs labeled `HAT-Ready`, using isolated sub-agents and PR label/comment writeback.
 - **[hat-backend-friendly](./skills/engineering/hat-backend-friendly/SKILL.md)** — Diagnose backend services for Agent-friendly HAT readiness, with a Chinese doctor-style report and low-intrusion improvement plan.
+- **[hat-copilot](./skills/engineering/hat-copilot/SKILL.md)** — 基于已有 HAT 产物进行人类验收副驾驶：Agent 自动准备和检查，人类确认验收结论，并维护 `human-report.md`。
 - **[hat-prepare](./skills/engineering/hat-prepare/SKILL.md)** — Prepare HAT (hand acceptance testing) after TDD by generating an environment guide, acceptance checklist, data needs, and an idempotent `prepare.sh`.
 - **[hat-run](./skills/engineering/hat-run/SKILL.md)** — Run an existing HAT guide by checking the prepared environment, executing automatable acceptance steps, and writing reports with evidence.
 - **[hat-frontend-friendly](./skills/engineering/hat-frontend-friendly/SKILL.md)** — Add a `window.__hat` frontend control surface so HAT/browser agents can use discoverable business actions instead of brittle component DOM clicks.

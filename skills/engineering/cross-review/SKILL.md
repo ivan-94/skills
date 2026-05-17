@@ -63,14 +63,20 @@ Use stricter tool allowlists when the local Claude Code version and project setu
 Use Codex's non-interactive mode:
 
 ```bash
-codex exec --sandbox read-only --ask-for-approval never "$PROMPT"
+codex -a never exec --sandbox read-only "$PROMPT"
 ```
 
 Keep the run read-only:
 
 - Do not use `--dangerously-bypass-approvals-and-sandbox`.
 - Use `--sandbox read-only`.
-- Use `--ask-for-approval never` so Codex cannot escalate into writes.
+- Use `-a never` before the `exec` subcommand so Codex cannot ask to escalate permissions.
+- Equivalent config-override shape, useful in scripts:
+
+  ```bash
+  codex exec --sandbox read-only -c 'approval_policy="never"' "$PROMPT"
+  ```
+
 - If read-only operation cannot be guaranteed, stop and report failure.
 
 ## Self-Review Invocation

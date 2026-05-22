@@ -192,6 +192,7 @@ General workflow tools, not code-specific.
 
 **Model-invoked**
 
+- **[brainstorming](./skills/productivity/brainstorming/SKILL.md)** — Explore user intent, requirements, and design before implementation.
 - **[grilling](./skills/productivity/grilling/SKILL.md)** — Interview the user relentlessly about a plan or design until every branch of the decision tree is resolved. The reusable loop behind `grill-me` and `grill-with-docs`.
 
 ### Misc

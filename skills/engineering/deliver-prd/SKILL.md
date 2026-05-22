@@ -45,6 +45,7 @@ flowchart TD
 - 若项目已有 Agent Runtime，则由父 Agent 为自己和每个 Slice 准备、记录、停止和销毁 Agent Runtime；若没有，则子 Agent 继续使用 worktree 隔离。
 - 子 Agent 每次只实现一个 Slice，并使用 `/tdd` 或等价红绿重构实践。
 - 子 Agent 在自己的 Slice 分支本地 commit，但不 push、不创建 PR、不运行 cross-review、不运行 HAT 准备、不编辑 GitHub。
+- 父 Agent 启动子 Agent 前创建并维护 `docs/prd/<PRD-number>/implementation-notes.html`，父 Agent 和子 Agent 都必须先读再按需更新它，用于记录实现过程对 PRD 的解释、设计决策、偏离、权衡和未决问题。
 - 父 Agent 为整个 PRD 交付创建或更新一个 Draft PR，并标记 `HAT-Ready`。
 - 不运行 `/hat-run`。
 
@@ -55,6 +56,7 @@ flowchart TD
 - 在所有已确认 Slice 的子 Agent 任务完成并合入父集成分支之前，父 Agent 禁止亲自实现任何 Slice 的具体业务代码。
 - 父 Agent 可以修复 merge conflict、集成层 glue 问题、HAT/PR 文档和编排脚本问题；如果问题属于某个 Slice 的业务实现缺陷，应退回对应子 Agent 继续修复。
 - 若某个 Slice 无法由子 Agent 完成，父 Agent 不应直接接手实现；必须停止并让用户重新决定是否改变职责边界。
+- 父 Agent 负责创建、维护和最终整理 `docs/prd/<PRD-number>/implementation-notes.html`；子 Agent 也可读写该文件，优先补充自己 Slice 相关内容，父 Agent 在 review 和 merge 后统一收口。
 
 ## 发现
 
@@ -81,6 +83,7 @@ flowchart TD
 - 父集成分支，默认 `prd/<prd-number>-<slug>`。
 - Slice 分支，默认 `slice/<prd-number>-<slice-number>-<slug>`。
 - Worktree 路径，以及父 Agent 为每个 Slice 准备的 Agent Runtime 状态（如果可用）。
+- `docs/prd/<PRD-number>/implementation-notes.html` 的创建计划和维护规则。
 - 子 Agent 恢复模式：`resumable` 或 `single-shot`。Claude Code 只有在 experimental agent teams 开启且 SendMessage 可用时才能按 `resumable` 处理；Codex 在可记录 agent id 并继续发送输入或 resume 时按 `resumable` 处理。
 - 子 Agent 职责边界。
 - 父 Agent ToDoList：覆盖 discovery、调度、每个 wave、父级 review、合并、整体验证、cross-review、HAT 准备和 PR。
@@ -95,6 +98,15 @@ flowchart TD
 - ToDoList 必须随状态变化更新；返工、阻塞、跳过或合并完成时要反映最新状态。
 - 若当前工具没有专用 todo UI，也要在对话或 summary 中维护等价的短清单。
 
+## Implementation Notes
+
+- 父 Agent 在调度计划通过后、启动任何子 Agent 前创建 `docs/prd/<PRD-number>/implementation-notes.html`。
+- 这份文件是 live artifact，不是最后补写的总结。父 Agent 和子 Agent 都必须先读再写；当实现过程出现 PRD 解释、设计决策、偏离、权衡或未决问题时，及时更新。
+- 文件内容默认使用中文。内容保持轻量，围绕设计决策、偏离说明、权衡记录和未决问题展开；可以包含来源线索，但不要把它扩展成新的 Source Manifest 强制范围。
+- 子 Agent 优先更新自己 Slice 相关内容；如果发现跨 Slice 或全局级信息，也可以写入文件或在 summary 中提醒父 Agent。
+- 父 Agent 在每个 Slice review、merge 或返工后检查并整理该文件，最终 cross-review、HAT 准备和 PR 前复查它是否反映当前实现状态。
+- 是否把该文件提交、写入 HAT guide 或放入 PR Source Manifest，由父 Agent 根据交付场景判断；若文件包含对 reviewer 或验收者有价值的解释、偏离、权衡或未决风险，优先保留稳定引用。
+
 ## 调度
 
 按依赖 DAG 为每个可执行 Slice 启动一个子 Agent(不能继承上下文)。无依赖 Slice 可以并发；有依赖 Slice 只能在 blocker 已合并进父集成分支后启动。
@@ -103,6 +115,7 @@ flowchart TD
 
 - 明确父 PRD、目标 Slice、分支和 worktree，以及父 Agent 已准备好的 Agent Runtime 运行信息。传递 slice 相关的 Source Manifest
 - 开始执行前创建并维护 Slice ToDoList。
+- 开始实现前读取 `docs/prd/<PRD-number>/implementation-notes.html`；实现过程中若做出 PRD 解释、设计决策、偏离、权衡或发现未决问题，更新该文件，优先写入本 Slice 相关内容。
 - 使用 `/tdd` skill 执行；若当前环境不支持 slash command，则遵守等价的红绿重构实践。
 - 只实现该 Slice，在本地 commit；不要 push、创建 PR、运行 cross-review、运行 HAT 准备或编辑 GitHub。
 - 返回父 Agent 合并和审查所需的信息：commit、测试证据、变更文件、风险和 Source Manifest 证据。
@@ -139,6 +152,7 @@ flowchart TD
 - 运行适合整个 PRD 范围的集成验证，例如测试、typecheck、lint、build、E2E 或 service smoke。
 - 运行 `/cross-review`；P0 回到实现修复循环，P1/P2 保留到 reviewer notes。
 - 运行 `/hat-prepare`，为完整 PRD 交付生成一个合并范围的 HAT。
+- 复查 `docs/prd/<PRD-number>/implementation-notes.html`，确认其中的设计决策、偏离、权衡和未决问题与最终实现一致；是否提交或引用该文件由父 Agent 根据交付场景判断。
 - 用户确认后，从父分支提交实现、测试、集成修复和 HAT 产物。
 - 用户确认后，创建或更新一个 Draft PR 并添加 `HAT-Ready`。不要静默创建 label。
 

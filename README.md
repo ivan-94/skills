@@ -175,6 +175,7 @@ Skills I use daily for code work.
 - **[merge-pr](./skills/engineering/merge-pr/SKILL.md)** — Merge a ready GitHub PR through `gh` CLI with isolated worktrees, conservative conflict handling, required tests, merge queue support, and post-merge target-branch verification.
 - **[setup-agent-runtime](./skills/engineering/setup-agent-runtime/SKILL.md)** — Set up an Agent Runtime for Compose/devcontainer projects, with isolated worktrees, dynamic ports, project-local sandbox CLI, docs, and cleanup-safe validation.
 - **[setup-agent-workflows](./skills/engineering/setup-agent-workflows/SKILL.md)** — Set up optional project-level workflow maps and Source Manifest handoff rules for long-running or multi-agent engineering work.
+- **[skill-reviewer](./skills/engineering/skill-reviewer/SKILL.md)** — 从智能体使用视角审查技能的触发质量、行为清晰度、冲突、冗余、歧义、弱引导，并给出具体修订路径。
 - **[tdd](./skills/engineering/tdd/SKILL.md)** — Test-driven development with a red-green-refactor loop. Builds features or fixes bugs one vertical slice at a time.
 - **[domain-modeling](./skills/engineering/domain-modeling/SKILL.md)** — Actively build and sharpen a project's domain model — challenge terms against the glossary, stress-test with edge-case scenarios, and update `CONTEXT.md` and ADRs inline.
 - **[codebase-design](./skills/engineering/codebase-design/SKILL.md)** — Shared discipline and vocabulary for designing deep modules: a lot of behaviour behind a small interface, placed at a clean seam, testable through that interface.

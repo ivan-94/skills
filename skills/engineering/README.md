@@ -34,6 +34,7 @@ Model- or user-reachable (rich trigger phrasing so the model can reach for them)
 - **[merge-pr](./merge-pr/SKILL.md)** — Merge a ready GitHub PR through `gh` CLI with isolated worktrees, conservative conflict handling, required tests, merge queue support, and post-merge target-branch verification.
 - **[setup-agent-runtime](./setup-agent-runtime/SKILL.md)** — Set up an Agent Runtime for Compose/devcontainer projects, with isolated worktrees, dynamic ports, project-local sandbox CLI, docs, and cleanup-safe validation.
 - **[setup-agent-workflows](./setup-agent-workflows/SKILL.md)** — Set up optional project-level workflow maps and Source Manifest handoff rules for long-running or multi-agent engineering work.
+- **[skill-reviewer](./skill-reviewer/SKILL.md)** — 从智能体使用视角审查技能的触发质量、行为清晰度、冲突、冗余、歧义、弱引导，并给出具体修订路径。
 - **[tdd](./tdd/SKILL.md)** — Test-driven development with a red-green-refactor loop. Builds features or fixes bugs one vertical slice at a time.
 - **[domain-modeling](./domain-modeling/SKILL.md)** — Actively build and sharpen a project's domain model — challenge terms, stress-test with scenarios, update `CONTEXT.md` and ADRs inline.
 - **[codebase-design](./codebase-design/SKILL.md)** — Shared discipline and vocabulary for designing deep modules: small interfaces, clean seams, testable through the interface.

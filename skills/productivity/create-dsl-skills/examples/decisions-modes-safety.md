@@ -3,22 +3,27 @@
 Use this when the skill has explicit branch rules, top-level modes, fallback behavior, or approval boundaries.
 
 ```python
-decision(
-    "task_kind",
-    "Is the user asking to create, rewrite, or review a skill contract?",
-    branches={
-        "create": "draft_new_contract",
-        "rewrite": "rewrite_existing_contract",
-        "review": "review_existing_contract",
-    },
-    default="review",
-    ask_when_uncertain=True,
-)
-
 decision_rules([
+    when("user asks to create a new skill", then="draft_new_contract"),
+    when("user asks to rewrite an existing skill", then="rewrite_existing_contract"),
+    when("user asks to critique or audit", then="review_existing_contract"),
     when("target skill has no contract block", then="draft a new contract", else_="review existing contract"),
-    prefer("workflow", over="workflow_graph", reason="linear workflows are easier for agents to follow"),
-    choose(from_=["workflow", "workflow_graph", "state_machine"], by="actual control-flow shape", default="workflow"),
+    when("linear workflow is enough", then="use workflow instead of workflow_graph"),
+    when("task kind is ambiguous", then="ask the user whether to create, rewrite, or review"),
+    when("required input missing", then="ask for exactly the missing input"),
+    when("referenced file unavailable", then="continue with available context and state the limitation"),
+    when("preferred deterministic script is unavailable", then="perform the equivalent manual inspection"),
+    when(
+        "fallback needs user approval",
+        then=f"""
+        Ask before continuing. Use {call_human(
+            "approve_fallback",
+            how="explain the fallback path, why it is needed, and whether it changes risk or scope",
+            expect="explicit approval, rejection, or a requested alternative",
+            on_failure="stop the fallback path",
+        )}.
+        """,
+    ),
 ])
 
 modes(
@@ -58,29 +63,6 @@ modes(
     ],
     default="review",
     selection="Do not switch from review to rewrite unless the user requested edits.",
-)
-
-failure_modes([
-    when("required input missing", then="ask for exactly the missing input"),
-    when("referenced file unavailable", then="continue with available context and state the limitation"),
-])
-
-fallback_strategy(
-    [
-        when("preferred deterministic script is unavailable", then="perform the equivalent manual inspection"),
-        when(
-            "fallback needs user approval",
-            then=f"""
-            Ask before continuing. Use {call_human(
-                "approve_fallback",
-                how="explain the fallback path, why it is needed, and whether it changes risk or scope",
-                expect="explicit approval, rejection, or a requested alternative",
-                on_failure="stop the fallback path",
-            )}.
-            """,
-        ),
-    ],
-    require_user_approval="when_destructive",
 )
 
 safety_policy(

@@ -1,6 +1,6 @@
 # CLI-Backed Compact Skill Example
 
-Use this for a simple skill backed by one bundled CLI/script plus one small reference file. This is the default shape for notification, formatting, export, upload, or wrapper skills that do not need review vocabulary, state machines, graph workflows, or teaching examples.
+Use this for a simple skill backed by one bundled CLI/script plus one small reference file. This is the default shape for notification, formatting, export, upload, or wrapper skills that do not need review vocabulary, graph workflows, or teaching examples.
 
 ```python
 from skill_contract import *
@@ -59,7 +59,7 @@ decision_rules([
     when("user asks for dry-run, preview, or validation only", then="run the CLI in dry-run mode and do not send"),
     when("user explicitly authorizes a real send", then="run the CLI send path with the approved content and destination"),
     when("message format is raw, text, card, or business payload", then="preserve the requested payload style instead of normalizing it into plain text"),
-    prefer("dry-run", over="send", reason="help or dry-run is safer when CLI flags or payload shape are uncertain"),
+    when("CLI flags or payload shape are uncertain", then="prefer help or dry-run over a real send"),
 ])
 
 workflow([
@@ -87,8 +87,8 @@ workflow([
             on_failure="report the CLI error and do not retry a real send without user approval",
         )}.
         """,
-        requires=["message", "send_authorization"],
-        produces=["send_result"],
+        reads=["message", "send_authorization"],
+        writes=["send_result"],
     ),
 ])
 
@@ -106,7 +106,7 @@ safety_policy(
 
 quality_bar(
     must=[
-        "Contract stays lightweight: no teaching examples, severity_levels, or review_dimensions unless the user asks for them.",
+        "Contract stays lightweight: no teaching examples or review_dimensions unless the user asks for them.",
         "decision_rules only describe user-visible CLI choices such as dry-run/send and payload style.",
         "Script target is skill-relative; call_script how explains the host-root command when needed.",
         "Real external sends have an explicit authorization input and safety_policy approval boundary.",

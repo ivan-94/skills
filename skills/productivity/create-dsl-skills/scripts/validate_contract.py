@@ -18,7 +18,7 @@ from typing import Any
 
 
 PY_BLOCK_RE = re.compile(r"```python\n(.*?)```", re.S)
-BEHAVIOR_DECLARATIONS = {"workflow", "workflow_graph", "state_machine", "modes", "loop", "map_each"}
+BEHAVIOR_DECLARATIONS = {"workflow", "workflow_graph", "modes", "loop", "map_each"}
 CALL_MARKER_HOW_INDEX = {
     "call_script": 1,
     "call_tool": 1,
@@ -248,8 +248,6 @@ def validate_duplicate_ids(tree: ast.AST, filename: str) -> list[dict[str, Any]]
         findings.extend(duplicate_call_id_findings(call_list_from_keyword(node, "body"), "step", filename))
     for node in calls_named(tree, "workflow_graph"):
         findings.extend(duplicate_call_id_findings(call_list_from_keyword(node, "nodes"), "node", filename))
-    for node in calls_named(tree, "state_machine"):
-        findings.extend(duplicate_call_id_findings(call_list_from_keyword(node, "states"), "state", filename))
     for node in calls_named(tree, "modes"):
         findings.extend(duplicate_call_id_findings(call_list_from_arg_or_keyword(node, 0, "modes"), "mode", filename))
     return findings
@@ -274,29 +272,6 @@ def validate_workflow_graphs(tree: ast.AST, filename: str) -> list[dict[str, Any
                 if value not in known:
                     findings.append(
                         finding("error", filename, f"edge references unknown workflow_graph node {value!r}", edge_call.lineno)
-                    )
-    return findings
-
-
-def validate_state_machines(tree: ast.AST, filename: str) -> list[dict[str, Any]]:
-    findings: list[dict[str, Any]] = []
-    for machine in calls_named(tree, "state_machine"):
-        state_calls = call_list_from_keyword(machine, "states")
-        state_names = [literal_string(state.args[0]) for state in state_calls if state.args]
-        known = {value for value in state_names if value is not None}
-        initial = literal_string(keyword_value(machine, "initial") or ast.Constant(None))
-        if initial and initial not in known:
-            findings.append(finding("error", filename, f"state_machine initial references unknown state {initial!r}", machine.lineno))
-        for stop_state in literal_string_list(keyword_value(machine, "stop_states")):
-            if stop_state not in known:
-                findings.append(finding("error", filename, f"state_machine stop state references unknown state {stop_state!r}", machine.lineno))
-        for transition_call in call_list_from_keyword(machine, "transitions"):
-            from_state = literal_string(arg_or_keyword(transition_call, 0, "from_") or ast.Constant(None))
-            to_state = literal_string(arg_or_keyword(transition_call, 1, "to") or ast.Constant(None))
-            for value in (from_state, to_state):
-                if value and value not in known:
-                    findings.append(
-                        finding("error", filename, f"transition references unknown state {value!r}", transition_call.lineno)
                     )
     return findings
 
@@ -349,7 +324,7 @@ def validate_required_structure(tree: ast.AST, markdown: str, filename: str) -> 
             findings.append(finding("error", filename, f"missing required {name}(...) declaration"))
     if not any(calls_named(tree, name) for name in BEHAVIOR_DECLARATIONS):
         findings.append(
-            finding("error", filename, "missing behavior declaration: workflow, workflow_graph, state_machine, modes, loop, or map_each")
+            finding("error", filename, "missing behavior declaration: workflow, workflow_graph, modes, loop, or map_each")
         )
     if not calls_named(tree, "do_not_activate_when"):
         findings.append(finding("warning", filename, "do_not_activate_when(...) is missing; confirm this skill has no meaningful neighbor"))
@@ -369,12 +344,12 @@ def validate_required_io_traceability(tree: ast.AST, filename: str) -> list[dict
         input_names.extend(required_names_from_call(node))
     for node in calls_named(tree, "outputs"):
         output_names.extend(required_names_from_call(node))
-    consumed = values_from_keyword_lists(tree, {"reads", "requires"})
-    produced = values_from_keyword_lists(tree, {"writes", "produces"})
+    consumed = values_from_keyword_lists(tree, {"reads"})
+    produced = values_from_keyword_lists(tree, {"writes"})
     for name in sorted(set(input_names) - consumed):
-        findings.append(finding("warning", filename, f"required input {name!r} is not explicitly consumed by reads/requires"))
+        findings.append(finding("warning", filename, f"required input {name!r} is not explicitly consumed by reads"))
     for name in sorted(set(output_names) - produced):
-        findings.append(finding("warning", filename, f"required output {name!r} is not explicitly produced by writes/produces"))
+        findings.append(finding("warning", filename, f"required output {name!r} is not explicitly written by writes"))
     return findings
 
 
@@ -461,7 +436,6 @@ def validate_skill(skill_dir: Path, spec_path: Path, include_examples: bool) -> 
         findings.extend(validate_required_structure(main_tree, markdown, str(skill_md)))
         findings.extend(validate_duplicate_ids(main_tree, str(skill_md)))
         findings.extend(validate_workflow_graphs(main_tree, str(skill_md)))
-        findings.extend(validate_state_machines(main_tree, str(skill_md)))
         findings.extend(validate_loops(main_tree, str(skill_md)))
         findings.extend(validate_required_io_traceability(main_tree, str(skill_md)))
 
@@ -502,7 +476,6 @@ def validate_skill(skill_dir: Path, spec_path: Path, include_examples: bool) -> 
                 )
                 findings.extend(validate_duplicate_ids(tree, example_filename))
                 findings.extend(validate_workflow_graphs(tree, example_filename))
-                findings.extend(validate_state_machines(tree, example_filename))
                 findings.extend(validate_loops(tree, example_filename))
 
     summary = summarize(findings)

@@ -1,6 +1,6 @@
 # Iteration And Aggregation Example
 
-Use this when the skill runs repeated checks, maps over cases, and reduces results into a summary.
+Use this when the skill runs repeated checks, maps over cases, and summarizes results.
 
 ```python
 loop(
@@ -41,10 +41,12 @@ map_each(
     parallel=False,
 )
 
-reduce(
-    name="summarize_cases",
-    over="case_results",
-    into="evaluation_summary",
-    do="Compute pass rate, recurring failure patterns, and recommended contract changes.",
-)
+workflow([
+    step(
+        "summarize_cases",
+        "Compute pass rate, recurring failure patterns, and recommended contract changes.",
+        reads=["case_results"],
+        writes=["evaluation_summary"],
+    ),
+])
 ```

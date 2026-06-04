@@ -157,8 +157,8 @@ OpenAI 的 `imagegen` skill 有两个顶层模式：
 ```py
 modes(...)
 mode(...)
-fallback_strategy(...)
-prerequisites(...)
+decision_rules(...)
+safety_policy(...)
 ```
 
 ### 4. 决策树
@@ -176,7 +176,7 @@ prerequisites(...)
 * tutorial
 * existing notebook refactor
 
-这说明 DSL 需要 `decision(...)`、`decision_tree(...)`、`decision_rules(...)`。
+这说明 DSL 需要 `decision_rules(...)` 与 `when(...)`，复杂流程再交给 `modes(...)` 或 `workflow_graph(...)`。
 
 ### 5. 质量标准
 
@@ -303,11 +303,10 @@ quality_bar(...)
 适合有分支的 skill：
 
 ```py
-decision(...)
 decision_rules(...)
+when(...)
 modes(...)
 mode(...)
-fallback_strategy(...)
 ```
 
 ### Level 3: Workflow graph
@@ -321,18 +320,13 @@ edge(...)
 stop_when(...)
 ```
 
-### Level 4: Loop / map-reduce / state machine
+### Level 4: Loop / map
 
 适合复杂 Agent 流程：
 
 ```py
 loop(...)
 map_each(...)
-reduce(...)
-retry(...)
-state_machine(...)
-state(...)
-transition(...)
 ```
 
 ---
@@ -424,7 +418,7 @@ loop(
 )
 ```
 
-### map/reduce example
+### map and summarize example
 
 ```py
 map_each(
@@ -441,38 +435,41 @@ map_each(
     parallel=True,
 )
 
-reduce(
-    name="aggregate_eval_results",
-    over="eval_results",
-    into="benchmark",
-    do="Compute pass rate, regressions, token/time deltas, and recurring failure patterns.",
-)
+workflow([
+    step(
+        "aggregate_eval_results",
+        "Compute pass rate, regressions, token/time deltas, and recurring failure patterns.",
+        reads=["eval_results"],
+        writes=["benchmark"],
+    ),
+])
 ```
 
-### state machine example
+### human review mode example
 
 ```py
-state_machine(
-    name="human_review_loop",
-    initial="drafted",
-
-    states=[
-        state("drafted"),
-        state("waiting_for_user_review"),
-        state("revision_requested"),
-        state("approved"),
-        state("finalized"),
+modes(
+    [
+        mode(
+            "human_review",
+            trigger="draft is ready and user approval is required",
+            workflow=[
+                step(
+                    "request_review",
+                    f"""
+                    Present the draft. Use {call_human(
+                        "review_draft",
+                        how="ask the user to approve, request changes, or stop",
+                        expect="approval, requested changes, or stop",
+                        on_failure="stop without finalizing",
+                    )}.
+                    """,
+                    reads=["draft"],
+                ),
+            ],
+        ),
     ],
-
-    transitions=[
-        transition("drafted", "waiting_for_user_review", after="present_draft"),
-        transition("waiting_for_user_review", "revision_requested", when="user_requests_changes"),
-        transition("revision_requested", "drafted", after="apply_requested_changes"),
-        transition("waiting_for_user_review", "approved", when="user_approves"),
-        transition("approved", "finalized", after="produce_final_artifact"),
-    ],
-
-    stop_states=["finalized"],
+    default="human_review",
 )
 ```
 
@@ -485,15 +482,15 @@ The previous response produced a full reference. Keep using or refine the follow
 ### Top-level
 
 ```py
-skill(name, purpose, summary=None, version=None, owner=None, tags=None, compatibility=None, license=None, experimental=False, custom=None)
+skill(name, purpose, summary=None, version=None, owner=None, tags=None)
 contract_policy(priority="contract_wins", prose_role="explanation_only", executable=False)
 ```
 
 ### Activation
 
 ```py
-activate_when(conditions, match="any", strength="normal")
-do_not_activate_when(conditions, priority="higher_than_activate_when")
+activate_when(conditions, match="any")
+do_not_activate_when(conditions)
 ```
 
 ### Inputs / outputs
@@ -553,25 +550,17 @@ step(
     purpose=None,
     reads=None,
     writes=None,
-    requires=None,
-    produces=None,
     when=None,
     ask_user=None,
 )
 ```
 
-### Decisions
+### Decision rules
 
 ```py
-decision(id, question, branches, default=None, ask_when_uncertain=False)
-
 decision_rules(rules)
 
 when(condition, then, else_=None)
-
-prefer(option, over, reason=None)
-
-choose(from_, by, default=None)
 ```
 
 ### Graph workflow
@@ -594,12 +583,6 @@ node(
     purpose=None,
     reads=None,
     writes=None,
-    requires=None,
-    produces=None,
-    tool=None,
-    script=None,
-    human_input=None,
-    retry=None,
 )
 
 edge(
@@ -646,15 +629,6 @@ map_each(
     parallel=False,
 )
 
-reduce(name, over, into, do)
-
-retry(
-    max_attempts,
-    when,
-    backoff=None,
-    before_retry=None,
-    after_exhausted=None,
-)
 ```
 
 `failure_policy` values:
@@ -664,23 +638,6 @@ retry(
 "continue_and_record"
 "skip_failed_item"
 "ask_user"
-```
-
-### State machine
-
-```py
-state_machine(
-    name,
-    initial,
-    states,
-    transitions,
-    stop_states,
-    invariants=None,
-)
-
-state(name, description=None, entry_action=None, exit_condition=None)
-
-transition(from_, to, when=None, after=None, guard=None)
 ```
 
 ### Modes
@@ -698,13 +655,9 @@ mode(
 )
 ```
 
-### Failure / fallback / safety
+### Safety
 
 ```py
-failure_modes(modes)
-
-fallback_strategy(rules, require_user_approval=False)
-
 safety_policy(must=None, must_not=None, approval_required=None)
 ```
 
@@ -718,26 +671,12 @@ validation(checks, on_failure="report")
 check(id, description, command=None, expected=None)
 ```
 
-### Examples / tests
+### Examples
 
 ```py
 examples(items)
 
 example(user, expected_behavior, input_files=None, output=None)
-
-tests(cases)
-
-test_case(id, prompt, files=None, expected=None, assertions=None)
-
-assertion(name, condition, evidence=None)
-```
-
-### Review helpers
-
-```py
-severity_levels(levels)
-
-level(name, meaning)
 ```
 
 ### Reviewer vocabulary
@@ -760,14 +699,14 @@ validation([
     check("negative_activation_boundary", "do_not_activate_when exists for neighboring skills or risky over-triggering"),
     check("required_inputs_defined", "required inputs are defined"),
     check("required_outputs_defined", "required outputs are defined"),
-    check("behavior_shape_exists", "workflow or workflow_graph or state_machine exists"),
+    check("behavior_shape_exists", "workflow, workflow_graph, modes, loop, or map_each exists"),
     check("resource_paths_declared", "all resource paths referenced by workflow are declared"),
     check("scripts_explain_usage", "all declared scripts explain when to use them"),
     check("loops_have_stop", "all loops have stop_when"),
     check("graph_edges_valid", "all graph edges reference existing nodes"),
     check("graph_nodes_unique", "all graph nodes have unique ids"),
     check("branches_terminate", "all graph branches eventually reach an output, stop condition, or user question"),
-    check("fallback_paths_defined", "fallback paths are defined for unavailable tools or missing inputs"),
+    check("fallback_paths_defined", "decision_rules or workflow steps define unavailable-tool and missing-input behavior"),
     check("quality_bar_observable", "quality_bar contains observable criteria"),
 ])
 ```
@@ -780,10 +719,8 @@ validation([
     check("edge_targets_exist", "Every edge references existing nodes."),
     check("loop_stop_condition", "Every loop has at least one stop condition."),
     check("loop_bounded_or_user_stoppable", "Every loop has either max_iterations or a user-controllable stop condition."),
-    check("state_machine_initial_state", "Every state machine has an initial state."),
-    check("state_machine_stop_state", "Every state machine has at least one stop state."),
     check("required_inputs_consumed", "Every required input is consumed by at least one step or node."),
-    check("required_outputs_produced", "Every required output is produced by at least one step or node."),
+    check("required_outputs_written", "Every required output is written by at least one step or node."),
     check("state_variables_defined", "Every state variable read by a node is written upstream or declared as input."),
     check("parallel_branches_join_or_terminate", "Every parallel branch has an explicit join or termination rule."),
 ])
@@ -876,7 +813,7 @@ This section explains the contract above. Do not introduce new rules here.
 
 5. **Progressive complexity.**  
    Simple skills should not need graph syntax.  
-   Complex skills can opt into graph/loop/state machine.
+   Complex skills can opt into graph or loop syntax.
 
 6. **Avoid Markdown duplication.**  
    If the DSL says it, Markdown should not repeat it unless needed for readability.

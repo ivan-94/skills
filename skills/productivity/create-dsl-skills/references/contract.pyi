@@ -18,16 +18,16 @@ from typing import Literal, TypeAlias
 # interactions.
 # These markers do not execute anything; they make the intended call auditable.
 # They do not replace structured control-flow gates such as ask_when_missing,
-# ask_user, ask_when_uncertain, human_input, failure_policy="ask_user",
-# require_user_approval, approval_required, or validation(on_failure="ask_user").
+# ask_user, ask_when_uncertain, failure_policy="ask_user",
+# approval_required, or validation(on_failure="ask_user").
 #
 # Minimal complete contract:
 # - exactly one skill(...)
 # - at least one activate_when(...)
 # - do_not_activate_when(...) unless the skill has no meaningful neighbor
 # - inputs(...) and outputs(...)
-# - one behavior declaration: workflow(...), workflow_graph(...), state_machine(...),
-#   modes(...), loop(...), map_each(...), or decision_rules(...) plus workflow(...)
+# - one behavior declaration: workflow(...), workflow_graph(...), modes(...),
+#   loop(...), map_each(...), or decision_rules(...) plus workflow(...)
 #
 # Static reviewer expectations:
 # - frontmatter description states the capability and concrete activation trigger
@@ -36,7 +36,7 @@ from typing import Literal, TypeAlias
 #   contradict do_not_activate_when(...)
 # - ids are stable snake_case strings and unique in their local scope
 # - required inputs are consumed by a step, node, rule, or mode
-# - required outputs are produced by a step, node, rule, or mode
+# - required outputs are written by a step, node, rule, or mode
 # - every branch reaches an output, stop condition, or user question
 # - every loop has stop_when or max_iterations
 # - every graph edge references existing nodes
@@ -62,10 +62,6 @@ class Reference(Path): ...
 class Asset(Path): ...
 class CallMarker(str): ...
 
-JSONScalar: TypeAlias = str | int | float | bool | None
-JSONValue: TypeAlias = JSONScalar | list["JSONValue"] | dict[str, "JSONValue"]
-
-
 # ---------------------------------------------------------------------------
 # Opaque DSL element types
 # ---------------------------------------------------------------------------
@@ -77,23 +73,15 @@ class ReferenceSpec: ...
 class AssetSpec: ...
 class EnvSpec: ...
 class StepSpec: ...
-class DecisionSpec: ...
 class RuleSpec: ...
-class PreferenceSpec: ...
-class ChoiceSpec: ...
 class NodeSpec: ...
 class EdgeSpec: ...
 class StopSpec: ...
 class LoopSpec: ...
 class MapSpec: ...
-class ReduceSpec: ...
-class RetrySpec: ...
-class StateSpec: ...
-class TransitionSpec: ...
 class ModeSpec: ...
 class CheckSpec: ...
 class ExampleSpec: ...
-class LevelSpec: ...
 
 
 # ---------------------------------------------------------------------------
@@ -101,12 +89,6 @@ class LevelSpec: ...
 # ---------------------------------------------------------------------------
 
 Match: TypeAlias = Literal["any", "all"]
-ActivationStrength: TypeAlias = Literal[
-    "weak",
-    "normal",
-    "strong",
-    "always_when_matched",
-]
 ReadStrategy: TypeAlias = Literal["on_demand", "always", "never"]
 NetworkPolicy: TypeAlias = Literal["unknown", "not_required", "optional", "required"]
 FilesystemPolicy: TypeAlias = Literal["workspace", "read_only", "anywhere_with_user_request"]
@@ -117,8 +99,6 @@ FailurePolicy: TypeAlias = Literal[
     "skip_failed_item",
     "ask_user",
 ]
-FallbackApproval: TypeAlias = Literal["always", "when_destructive", "never"]
-SeverityName: TypeAlias = Literal["critical", "major", "minor", "info"]
 SkillCallMode: TypeAlias = Literal["compose", "consult", "delegate", "handoff"]
 SubagentContext: TypeAlias = Literal["fork"] | str
 SubagentEffort: TypeAlias = Literal["low", "medium", "high"]
@@ -136,10 +116,6 @@ def skill(
     version: str | None = None,
     owner: str | None = None,
     tags: list[str] | None = None,
-    compatibility: list[str] | None = None,
-    license: str | None = None,
-    experimental: bool = False,
-    custom: dict[str, JSONValue] | None = None,
 ) -> None:
     """Required exactly once. Declares the skill identity, reusable capability, and optional catalog metadata."""
     ...
@@ -153,7 +129,6 @@ def activate_when(
     conditions: list[str],
     *,
     match: Match = "any",
-    strength: ActivationStrength = "normal",
 ) -> None:
     """Positive trigger rules. Conditions should name concrete intents or contexts."""
     ...
@@ -161,8 +136,6 @@ def activate_when(
 
 def do_not_activate_when(
     conditions: list[str],
-    *,
-    priority: Literal["higher_than_activate_when"] = "higher_than_activate_when",
 ) -> None:
     """Negative trigger boundaries. These override activate_when when both match."""
     ...
@@ -391,8 +364,6 @@ def step(
     purpose: str | None = None,
     reads: list[str] | None = None,
     writes: list[str] | None = None,
-    requires: list[str] | None = None,
-    produces: list[str] | None = None,
     when: str | None = None,
     ask_user: str | None = None,
 ) -> StepSpec:
@@ -401,25 +372,13 @@ def step(
 
 
 # ---------------------------------------------------------------------------
-# Decisions and rules
+# Decision rules
 # ---------------------------------------------------------------------------
 
-def decision(
-    id: str,
-    question: str,
-    *,
-    branches: dict[str, str],
-    default: str | None = None,
-    ask_when_uncertain: bool = False,
-) -> DecisionSpec:
-    """Declares one branch point. ask_when_uncertain declares a formal user-input gate when branch selection is ambiguous."""
-    ...
-
-
 def decision_rules(
-    rules: list[RuleSpec | PreferenceSpec | ChoiceSpec],
+    rules: list[RuleSpec],
 ) -> None:
-    """Declares flat conditional rules and preferences."""
+    """Declares flat conditional rules and lightweight preferences."""
     ...
 
 
@@ -430,26 +389,6 @@ def when(
     else_: str | None = None,
 ) -> RuleSpec:
     """Declares a condition and the behavior it selects."""
-    ...
-
-
-def prefer(
-    option: str,
-    *,
-    over: str,
-    reason: str | None = None,
-) -> PreferenceSpec:
-    """Declares a default preference and why it is safer or more reliable."""
-    ...
-
-
-def choose(
-    *,
-    from_: list[str],
-    by: str,
-    default: str | None = None,
-) -> ChoiceSpec:
-    """Declares how to choose among named options."""
     ...
 
 
@@ -479,14 +418,8 @@ def node(
     purpose: str | None = None,
     reads: list[str] | None = None,
     writes: list[str] | None = None,
-    requires: list[str] | None = None,
-    produces: list[str] | None = None,
-    tool: str | None = None,
-    script: str | None = None,
-    human_input: str | None = None,
-    retry: RetrySpec | None = None,
 ) -> NodeSpec:
-    """Declares a graph node. human_input declares a formal user-input gate for this node."""
+    """Declares a graph node. Put tool, script, MCP, skill, subagent, or human calls inside action f-strings."""
     ...
 
 
@@ -544,68 +477,9 @@ def map_each(
     ...
 
 
-def reduce(
-    *,
-    name: str,
-    over: str,
-    into: str,
-    do: str,
-) -> ReduceSpec:
-    """Aggregates mapped results into one named state value."""
-    ...
-
-
-def retry(
-    *,
-    max_attempts: int,
-    when: list[str],
-    backoff: str | None = None,
-    before_retry: str | None = None,
-    after_exhausted: str | None = None,
-) -> RetrySpec:
-    """Declares retry behavior for a step or node."""
-    ...
-
-
 # ---------------------------------------------------------------------------
-# State machines and modes
+# Modes
 # ---------------------------------------------------------------------------
-
-def state_machine(
-    *,
-    name: str,
-    initial: str,
-    states: list[StateSpec],
-    transitions: list[TransitionSpec],
-    stop_states: list[str],
-    invariants: list[str] | None = None,
-) -> None:
-    """Use for durable human review, approval, or lifecycle states."""
-    ...
-
-
-def state(
-    name: str,
-    *,
-    description: str | None = None,
-    entry_action: str | None = None,
-    exit_condition: str | None = None,
-) -> StateSpec:
-    """Declares one state. State names must be unique in a state_machine."""
-    ...
-
-
-def transition(
-    from_: str,
-    to: str,
-    *,
-    when: str | None = None,
-    after: str | None = None,
-    guard: str | None = None,
-) -> TransitionSpec:
-    """Declares a state transition. Referenced states must exist."""
-    ...
-
 
 def modes(
     modes: list[ModeSpec],
@@ -631,24 +505,8 @@ def mode(
 
 
 # ---------------------------------------------------------------------------
-# Failure, fallback, and safety
+# Safety
 # ---------------------------------------------------------------------------
-
-def failure_modes(
-    modes: list[RuleSpec],
-) -> None:
-    """Declares common failures and required agent responses."""
-    ...
-
-
-def fallback_strategy(
-    rules: list[RuleSpec],
-    *,
-    require_user_approval: bool | FallbackApproval = False,
-) -> None:
-    """Declares fallback behavior after the preferred path is unavailable. require_user_approval is a formal fallback gate."""
-    ...
-
 
 def safety_policy(
     *,
@@ -709,25 +567,6 @@ def example(
     output: str | None = None,
 ) -> ExampleSpec:
     """One user prompt and expected skill behavior."""
-    ...
-
-
-# ---------------------------------------------------------------------------
-# Output and review helpers
-# ---------------------------------------------------------------------------
-
-def severity_levels(
-    levels: list[LevelSpec],
-) -> None:
-    """Declares severity vocabulary for reviews or reports."""
-    ...
-
-
-def level(
-    name: SeverityName | str,
-    meaning: str,
-) -> LevelSpec:
-    """Declares one severity level."""
     ...
 
 

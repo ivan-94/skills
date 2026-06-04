@@ -50,16 +50,11 @@ environment(...)
 workflow(...)
 # 或
 workflow_graph(...)
-# 或
-state_machine(...)
 
 decision_rules(...)
-failure_modes(...)
-fallback_strategy(...)
 
 quality_bar(...)
 examples(...)
-tests(...)
 ````
 
 最小可用版本：
@@ -131,7 +126,7 @@ step("call_internal_function_x", "Invoke helper.parse_output_buffer().")
 
 简单 Skill 使用 `workflow()`。
 复杂 Skill 使用 `workflow_graph()`。
-有循环、审批、迭代时使用 `loop()` 或 `state_machine()`。
+有循环或迭代时使用 `loop()` / `map_each()`；审批使用 `ask_user`、`call_human` 和 `safety_policy()`。
 
 ---
 
@@ -202,7 +197,6 @@ skill(
     summary="Builds installable command-line tools with stable JSON output.",
     version="0.1.0",
     tags=["cli", "agent-tooling"],
-    compatibility=["codex", "generic-agent"],
 )
 ```
 
@@ -275,16 +269,7 @@ activate_when([
     "user asks to review a SKILL.md file",
     "user asks to audit an agent instruction file",
     "user asks to improve a slash command or skill",
-], match="any", strength="strong")
-```
-
-`strength` 可选值：
-
-```py
-"weak"
-"normal"
-"strong"
-"always_when_matched"
+], match="any")
 ```
 
 ---
@@ -690,8 +675,6 @@ step(
     purpose: str = None,
     reads: list[str] = None,
     writes: list[str] = None,
-    requires: list[str] = None,
-    produces: list[str] = None,
     when: str = None,
     ask_user: str = None,
 )
@@ -705,8 +688,6 @@ step(
     action="Open the generated file and confirm it is usable.",
     reads=["output_file"],
     writes=["validation_result"],
-    requires=["output_file.exists"],
-    produces=["pass_or_fail"],
 )
 ```
 
@@ -714,45 +695,13 @@ step(
 
 # 10. 决策 API
 
-## 10.1 decision()
-
-定义一个决策点。
-
-```py
-decision(
-    id: str,
-    question: str,
-    branches: dict,
-    default: str = None,
-    ask_when_uncertain: bool = False,
-)
-```
-
-示例：
-
-```py
-decision(
-    id="notebook_kind",
-    question="Is the notebook exploratory or instructional?",
-    branches={
-        "experiment": "use_experiment_workflow",
-        "tutorial": "use_tutorial_workflow",
-        "existing_notebook": "use_refactor_workflow",
-    },
-    default="experiment",
-    ask_when_uncertain=True,
-)
-```
-
----
-
-## 10.2 decision_rules()
+## 10.1 decision_rules()
 
 定义扁平化条件规则。
 
 ```py
 decision_rules(
-    rules: list[when | prefer | choose],
+    rules: list[when],
 )
 ```
 
@@ -762,13 +711,13 @@ decision_rules(
 decision_rules([
     when("user provides a local image and asks to change it", then="treat as edit"),
     when("user provides an image only as style reference", then="treat as generate"),
-    prefer("built_in_tool", over="cli_fallback"),
+    when("CLI fallback is requested explicitly", then="use CLI fallback after checking prerequisites"),
 ])
 ```
 
 ---
 
-## 10.3 when()
+## 10.2 when()
 
 定义条件行为。
 
@@ -787,54 +736,6 @@ when(
     "required input is missing",
     then="ask the user for exactly the missing input",
     else_="continue workflow",
-)
-```
-
----
-
-## 10.4 prefer()
-
-定义默认偏好。
-
-```py
-prefer(
-    option: str,
-    over: str,
-    reason: str = None,
-)
-```
-
-示例：
-
-```py
-prefer(
-    "templates",
-    over="hand-writing raw JSON",
-    reason="reduces invalid notebook structure",
-)
-```
-
----
-
-## 10.5 choose()
-
-定义多选规则。
-
-```py
-choose(
-    from_: list[str],
-    by: str,
-    default: str = None,
-)
-```
-
-示例：
-
-```py
-choose(
-    from_=["rust", "typescript", "python"],
-    by="installed toolchain and source material",
-    default="rust",
 )
 ```
 
@@ -907,12 +808,6 @@ node(
     purpose: str = None,
     reads: list[str] = None,
     writes: list[str] = None,
-    requires: list[str] = None,
-    produces: list[str] = None,
-    tool: str = None,
-    script: str = None,
-    human_input: str = None,
-    retry: retry = None,
 )
 ```
 
@@ -925,8 +820,6 @@ node(
     action="Execute the configured test command and save output.",
     reads=["test_command"],
     writes=["test_results"],
-    requires=["test_command.available"],
-    produces=["pass_fail_status", "failure_log"],
 )
 ```
 
@@ -1104,157 +997,11 @@ map_each(
 
 ---
 
-## 12.3 reduce()
-
-定义聚合逻辑。
-
-```py
-reduce(
-    name: str,
-    over: str,
-    into: str,
-    do: str,
-)
-```
-
-示例：
-
-```py
-reduce(
-    name="aggregate_eval_results",
-    over="eval_results",
-    into="benchmark",
-    do="Compute pass rate, regressions, token/time deltas, and recurring failure patterns.",
-)
-```
-
----
-
-## 12.4 retry()
-
-定义重试策略。
-
-```py
-retry(
-    max_attempts: int,
-    when: list[str],
-    backoff: str = None,
-    before_retry: str = None,
-    after_exhausted: str = None,
-)
-```
-
-示例：
-
-```py
-retry(
-    max_attempts=2,
-    when=["network_timeout", "rate_limit"],
-    before_retry="Wait briefly and retry the same read-only request.",
-    after_exhausted="Report failure and ask user whether to continue.",
-)
-```
-
----
-
-# 13. 状态机 API
-
-适合表达人工审批、草稿修改、长期任务状态。
-
-## 13.1 state_machine()
-
-```py
-state_machine(
-    name: str,
-    initial: str,
-    states: list[state],
-    transitions: list[transition],
-    stop_states: list[str],
-    invariants: list[str] = None,
-)
-```
-
-示例：
-
-```py
-state_machine(
-    name="human_review_loop",
-    initial="drafted",
-
-    states=[
-        state("drafted"),
-        state("waiting_for_user_review"),
-        state("revision_requested"),
-        state("approved"),
-        state("finalized"),
-    ],
-
-    transitions=[
-        transition("drafted", "waiting_for_user_review", after="present_draft"),
-        transition("waiting_for_user_review", "revision_requested", when="user_requests_changes"),
-        transition("revision_requested", "drafted", after="apply_requested_changes"),
-        transition("waiting_for_user_review", "approved", when="user_approves"),
-        transition("approved", "finalized", after="produce_final_artifact"),
-    ],
-
-    stop_states=["finalized"],
-)
-```
-
----
-
-## 13.2 state()
-
-```py
-state(
-    name: str,
-    description: str = None,
-    entry_action: str = None,
-    exit_condition: str = None,
-)
-```
-
-示例：
-
-```py
-state(
-    "waiting_for_user_review",
-    description="The agent has presented a draft and is waiting for user feedback.",
-    exit_condition="user approves or requests changes",
-)
-```
-
----
-
-## 13.3 transition()
-
-```py
-transition(
-    from_: str,
-    to: str,
-    when: str = None,
-    after: str = None,
-    guard: str = None,
-)
-```
-
-示例：
-
-```py
-transition(
-    "waiting_for_user_review",
-    "revision_requested",
-    when="user requests changes",
-)
-```
-
----
-
-# 14. 模式 API
+# 13. 模式 API
 
 适合表达一个 Skill 内的多种顶层模式。
 
-## 14.1 modes()
+## 13.1 modes()
 
 ```py
 modes(
@@ -1279,7 +1026,7 @@ modes(
 
 ---
 
-## 14.2 mode()
+## 13.2 mode()
 
 ```py
 mode(
@@ -1307,57 +1054,9 @@ mode(
 
 ---
 
-# 15. 失败与回退 API
+# 15. 安全 API
 
-## 15.1 failure_modes()
-
-定义常见失败情况。
-
-```py
-failure_modes(
-    modes: list[when],
-)
-```
-
-示例：
-
-```py
-failure_modes([
-    when("required input missing", then="ask for exactly the missing input"),
-    when("referenced file unavailable", then="continue with available files and state the limitation"),
-    when("script fails", then="read error output, retry only if fix is obvious"),
-])
-```
-
----
-
-## 15.2 fallback_strategy()
-
-定义主路径失败后的回退。
-
-```py
-fallback_strategy(
-    rules: list[when],
-    require_user_approval: bool = False,
-)
-```
-
-示例：
-
-```py
-fallback_strategy(
-    [
-        when("built-in tool unavailable", then="tell user CLI fallback exists"),
-        when("user explicitly chooses fallback", then="use CLI workflow"),
-        when("fallback requires secret and secret missing", then="ask user to configure it"),
-    ],
-    require_user_approval=True,
-)
-```
-
----
-
-## 15.3 safety_policy()
+## 15.1 safety_policy()
 
 定义安全和权限边界。
 
@@ -1514,114 +1213,11 @@ example(
 
 ---
 
-## 17.3 tests()
-
-```py
-tests(
-    cases: list[test_case],
-)
-```
-
-示例：
-
-```py
-tests([
-    test_case(
-        id="trigger-review",
-        prompt="请审查这个 SKILL.md 的问题",
-        expected=[
-            "skill activates",
-            "output includes critical/major/minor issues",
-        ],
-    ),
-    test_case(
-        id="non-trigger-execute",
-        prompt="用这个 skill 帮我生成 PDF",
-        expected=[
-            "skill does not activate",
-        ],
-    ),
-])
-```
-
----
-
-## 17.4 test_case()
-
-```py
-test_case(
-    id: str,
-    prompt: str,
-    files: list[str] = None,
-    expected: list[str] = None,
-    assertions: list[assertion] = None,
-)
-```
-
----
-
-## 17.5 assertion()
-
-```py
-assertion(
-    name: str,
-    condition: str,
-    evidence: str = None,
-)
-```
-
-示例：
-
-```py
-assertion(
-    name="has_non_use_boundary",
-    condition="review mentions at least one do_not_activate_when issue when missing",
-    evidence="review report text",
-)
-```
-
----
-
-# 18. 审查辅助 API
-
-## 18.1 severity_levels()
-
-定义问题等级。
-
-```py
-severity_levels(
-    levels: list[level],
-)
-```
-
-示例：
-
-```py
-severity_levels([
-    level("critical", "Causes wrong activation, skipped required work, or invalid output."),
-    level("major", "Forces the agent to guess or resolve ambiguity."),
-    level("minor", "Reduces clarity but likely does not break execution."),
-])
-```
-
----
-
-## 18.2 level()
-
-```py
-level(
-    name: str,
-    meaning: str,
-)
-```
-
----
-
-# 19. 审查 API
+# 18. 审查 API
 
 适合 reviewer 静态检查 Skill DSL。
 
-## 19.1 review_dimensions()
+## 18.1 review_dimensions()
 
 ```py
 review_dimensions(
@@ -1639,7 +1235,6 @@ review_dimensions([
     "workflow executability",
     "resource discoverability",
     "loop termination",
-    "state consistency",
     "failure paths",
     "agent usability",
 ])
@@ -1647,7 +1242,7 @@ review_dimensions([
 
 ---
 
-## 19.2 使用 validation 表达静态检查
+## 18.2 使用 validation 表达静态检查
 
 ```py
 validation(
@@ -1664,10 +1259,9 @@ validation(
         check("node_ids_unique", "Every node id is unique."),
         check("edge_targets_exist", "Every edge references existing nodes."),
         check("loop_stop_condition", "Every loop has at least one stop condition."),
-        check("state_machine_stop_state", "Every state machine has a stop state."),
         check("workflow_resources_declared", "Every resource referenced in workflow is declared."),
         check("required_inputs_consumed", "Every required input is consumed by at least one node or step."),
-        check("required_outputs_produced", "Every required output is produced by at least one node or step."),
+        check("required_outputs_written", "Every required output is written by at least one node or step."),
     ],
     on_failure="report",
 )
@@ -1748,10 +1342,8 @@ workflow([
 
 decision_rules([
     when("input is missing", then="ask the user for exactly the missing input"),
-    prefer("default_path", over="alternative_path", reason="more reliable for common cases"),
-])
-
-failure_modes([
+    when("default path is reliable for common cases", then="use default_path"),
+    when("alternative path is explicitly requested or required", then="use alternative_path"),
     when("unsupported request", then="explain limitation and offer closest supported path"),
     when("tool failure", then="inspect error and retry only if the fix is clear"),
 ])
@@ -1770,14 +1362,6 @@ examples([
     example(
         user="Example user request",
         expected_behavior="Expected agent behavior",
-    ),
-])
-
-tests([
-    test_case(
-        id="basic-trigger",
-        prompt="Example trigger prompt",
-        expected=["skill activates", "result is produced"],
     ),
 ])
 ```
@@ -1821,7 +1405,6 @@ workflow_graph(
             action="Run path A.",
             reads=["plan"],
             writes=["results"],
-            requires=["plan.path == 'A'"],
         ),
 
         node(
@@ -1829,7 +1412,6 @@ workflow_graph(
             action="Run path B.",
             reads=["plan"],
             writes=["results"],
-            requires=["plan.path == 'B'"],
         ),
 
         node(
@@ -1892,14 +1474,14 @@ validation([
     check("negative_activation_boundary", "do_not_activate_when exists for neighboring skills or risky over-triggering"),
     check("required_inputs_defined", "required inputs are defined"),
     check("required_outputs_defined", "required outputs are defined"),
-    check("behavior_shape_exists", "workflow or workflow_graph or state_machine exists"),
+    check("behavior_shape_exists", "workflow, workflow_graph, modes, loop, or map_each exists"),
     check("resource_paths_declared", "all resource paths referenced by workflow are declared"),
     check("scripts_explain_usage", "all declared scripts explain when to use them"),
     check("loops_have_stop", "all loops have stop_when"),
     check("graph_edges_valid", "all graph edges reference existing nodes"),
     check("graph_nodes_unique", "all graph nodes have unique ids"),
     check("branches_terminate", "all graph branches eventually reach an output, stop condition, or user question"),
-    check("fallback_paths_defined", "fallback paths are defined for unavailable tools or missing inputs"),
+    check("fallback_paths_defined", "decision_rules or workflow steps define unavailable-tool and missing-input behavior"),
     check("quality_bar_observable", "quality_bar contains observable criteria"),
 ])
 ```
@@ -1944,7 +1526,7 @@ workflow([...])
 多分支任务：
 
 ```py
-decision(...)
+decision_rules([...])
 workflow([...])
 ```
 
@@ -1959,7 +1541,7 @@ edge(..., parallel=True)
 
 ```py
 map_each(...)
-reduce(...)
+workflow([...])
 ```
 
 迭代改进：
@@ -1971,7 +1553,9 @@ loop(...)
 人工审批：
 
 ```py
-state_machine(...)
+modes([...])
+call_human(...)
+safety_policy(...)
 ```
 
 多模式技能：

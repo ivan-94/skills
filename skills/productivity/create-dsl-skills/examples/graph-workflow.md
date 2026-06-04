@@ -1,6 +1,6 @@
 # Graph Workflow Example
 
-Use this for non-linear flows, parallel branches, joins, retries, MCP-backed context, and explicit termination.
+Use this for non-linear flows, parallel branches, joins, MCP-backed context, fallback paths, and explicit termination.
 
 ```python
 workflow_graph(
@@ -26,12 +26,6 @@ workflow_graph(
             )}.
             """,
             writes=["design_context"],
-            retry=retry(
-                max_attempts=2,
-                when=["mcp_connection_missing", "transient_tool_error"],
-                before_retry="check that the Figma selection is still available",
-                after_exhausted="continue to request_design_source",
-            ),
         ),
         node(
             "request_design_source",
@@ -44,13 +38,12 @@ workflow_graph(
                 on_failure="stop without inventing design details",
             )}.
             """,
-            human_input="a Figma connection, screenshot, or equivalent design notes",
             writes=["design_context"],
         ),
         node("extract_components", action="Identify reusable components.", reads=["design_context"], writes=["component_notes"]),
         node("extract_tokens", action="Identify relevant design tokens and asset constraints.", reads=["design_context"], writes=["token_notes"]),
         node("draft_contract", action="Draft the implementation skill contract.", reads=["component_notes", "token_notes"], writes=["contract_draft"]),
-        node("finalize", action="Return the contract draft and limitations.", reads=["contract_draft"], produces=["result"]),
+        node("finalize", action="Return the contract draft and limitations.", reads=["contract_draft"], writes=["result"]),
     ],
     edges=[
         edge("read_design", "request_design_source", when="Figma context unavailable"),

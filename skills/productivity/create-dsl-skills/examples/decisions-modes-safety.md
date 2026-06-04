@@ -48,6 +48,7 @@ modes(
                         on_failure="stop without editing",
                     )}.
                     """,
+                    ask_user="Confirm whether to overwrite the target skill after reviewing the planned changes.",
                 ),
                 step("patch", "Rewrite the contract and prose after approval."),
             ],
@@ -67,7 +68,17 @@ failure_modes([
 fallback_strategy(
     [
         when("preferred deterministic script is unavailable", then="perform the equivalent manual inspection"),
-        when("fallback needs user approval", then="ask before continuing"),
+        when(
+            "fallback needs user approval",
+            then=f"""
+            Ask before continuing. Use {call_human(
+                "approve_fallback",
+                how="explain the fallback path, why it is needed, and whether it changes risk or scope",
+                expect="explicit approval, rejection, or a requested alternative",
+                on_failure="stop the fallback path",
+            )}.
+            """,
+        ),
     ],
     require_user_approval="when_destructive",
 )
@@ -76,5 +87,12 @@ safety_policy(
     must=["State when review is read-only."],
     must_not=["Do not edit files during review-only mode."],
     approval_required=["overwrite an existing skill", "delete a generated artifact"],
+)
+
+validation(
+    [
+        check("planned_changes_clear", "The planned file changes are specific enough for the user to approve or reject."),
+    ],
+    on_failure="ask_user",
 )
 ```

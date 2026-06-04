@@ -23,11 +23,22 @@ map_each(
     item="prompt",
     do=[
         step("run_case", "Evaluate one prompt against the skill contract."),
-        step("record_result", "Record activation, output shape, and failure notes."),
+        step(
+            "record_result",
+            f"""
+            Record activation, output shape, and failure notes.
+            If a failed case blocks the evaluation, use {call_human(
+                "resolve_eval_case_failure",
+                how="show the prompt, observed failure, and available options: retry, skip, or stop",
+                expect="one explicit resolution for the failed case",
+                on_failure="stop the map operation and report the unresolved case",
+            )}.
+            """,
+        ),
     ],
     collect_as="case_results",
-    failure_policy="continue_and_record",
-    parallel=True,
+    failure_policy="ask_user",
+    parallel=False,
 )
 
 reduce(

@@ -17,6 +17,9 @@ from typing import Literal, TypeAlias
 # markers inside those strings to annotate script, tool, MCP, skill, or human
 # interactions.
 # These markers do not execute anything; they make the intended call auditable.
+# They do not replace structured control-flow gates such as ask_when_missing,
+# ask_user, ask_when_uncertain, human_input, failure_policy="ask_user",
+# require_user_approval, approval_required, or validation(on_failure="ask_user").
 #
 # Minimal complete contract:
 # - exactly one skill(...)
@@ -199,7 +202,7 @@ def inputs(
     optional: list[str | InputSpec] | None = None,
     ask_when_missing: bool = True,
 ) -> None:
-    """Declares inputs the agent must identify before executing the skill."""
+    """Declares inputs the agent must identify before executing the skill. ask_when_missing is a formal user-input gate."""
     ...
 
 
@@ -380,7 +383,7 @@ def call_human(
     expect: str | None = None,
     on_failure: str | None = None,
 ) -> CallMarker:
-    """Marks a user question, confirmation, consent request, or human decision point inside natural language."""
+    """Marks a user question, confirmation, consent request, or human decision point inside natural language. Use structured fields for formal gates."""
     ...
 
 
@@ -409,7 +412,7 @@ def step(
     when: str | None = None,
     ask_user: str | None = None,
 ) -> StepSpec:
-    """One agent action. id must be stable and unique inside its workflow."""
+    """One agent action. id must be stable and unique inside its workflow. ask_user declares a formal user-input gate for this step."""
     ...
 
 
@@ -425,7 +428,7 @@ def decision(
     default: str | None = None,
     ask_when_uncertain: bool = False,
 ) -> DecisionSpec:
-    """Declares one branch point. Branch targets should be workflow ids or step ids."""
+    """Declares one branch point. ask_when_uncertain declares a formal user-input gate when branch selection is ambiguous."""
     ...
 
 
@@ -499,7 +502,7 @@ def node(
     human_input: str | None = None,
     retry: RetrySpec | None = None,
 ) -> NodeSpec:
-    """Declares a graph node. id must be unique inside the graph."""
+    """Declares a graph node. human_input declares a formal user-input gate for this node."""
     ...
 
 
@@ -553,7 +556,7 @@ def map_each(
     failure_policy: FailurePolicy = "stop_on_failure",
     parallel: bool = False,
 ) -> MapSpec:
-    """Runs the same step list over each item in a collection."""
+    """Runs the same step list over each item in a collection. failure_policy='ask_user' is a formal per-item failure gate."""
     ...
 
 
@@ -659,7 +662,7 @@ def fallback_strategy(
     *,
     require_user_approval: bool | FallbackApproval = False,
 ) -> None:
-    """Declares fallback behavior after the preferred path is unavailable."""
+    """Declares fallback behavior after the preferred path is unavailable. require_user_approval is a formal fallback gate."""
     ...
 
 
@@ -669,7 +672,7 @@ def safety_policy(
     must_not: list[str] | None = None,
     approval_required: list[str] | None = None,
 ) -> None:
-    """Declares safety constraints that govern all workflow paths."""
+    """Declares safety constraints that govern all workflow paths. approval_required lists formal approval gates."""
     ...
 
 
@@ -692,7 +695,7 @@ def validation(
     *,
     on_failure: Literal["report", "repair", "ask_user", "stop"] = "report",
 ) -> None:
-    """Declares validation actions or checks."""
+    """Declares validation actions or checks. on_failure='ask_user' is a formal validation-failure gate."""
     ...
 
 
@@ -758,11 +761,4 @@ def review_dimensions(
     dimensions: list[str],
 ) -> None:
     """Declares dimensions a reviewer should inspect."""
-    ...
-
-
-def static_checks(
-    checks: list[str],
-) -> None:
-    """Declares required static checks for the contract."""
     ...

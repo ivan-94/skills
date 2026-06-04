@@ -2,6 +2,8 @@
 
 Use this when the skill declares bundled scripts, references, assets, environment assumptions, tool preferences, embedded call markers, validation, and checks.
 
+`call_script(target, ...)` uses a skill-relative `target` such as `scripts/render_docx.py`. If the real command must run from the host project root, describe that command in `how`; do not put host-root paths in `target`.
+
 ```python
 resources(
     scripts=[
@@ -59,7 +61,7 @@ workflow([
         Render the generated document before judging layout quality.
         Use {call_script(
             "scripts/render_docx.py",
-            how="pass the generated docx path and an output directory, then inspect the produced page images",
+            how="from the host project root, run python3 skills/documents/scripts/render_docx.py with the generated docx path and an output directory, then inspect the produced page images",
             expect="one image per page",
             on_failure="report that visual verification could not be completed",
         )}.

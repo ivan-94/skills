@@ -8,7 +8,18 @@ state_machine(
     initial="drafted",
     states=[
         state("drafted", description="A contract draft exists.", entry_action="present the draft"),
-        state("waiting_for_user_review", exit_condition="user approves or requests changes"),
+        state(
+            "waiting_for_user_review",
+            entry_action=f"""
+            Present the draft and wait for review. Use {call_human(
+                "review_contract_draft",
+                how="ask the user to approve the draft or list requested changes",
+                expect="approval, requested changes, or a decision to stop",
+                on_failure="keep the state machine in waiting_for_user_review",
+            )}.
+            """,
+            exit_condition="user approves or requests changes",
+        ),
         state("revision_requested"),
         state("approved"),
         state("finalized"),
@@ -53,12 +64,15 @@ review_dimensions([
     "failure and approval paths",
 ])
 
-static_checks([
-    "frontmatter description is no broader than activate_when",
-    "all required outputs are produced",
-    "all call_* markers include how",
-    "all human approval points use call_human",
-    "all graph edges reference existing nodes",
-    "all loops have termination conditions",
-])
+validation(
+    [
+        check("frontmatter_not_too_broad", "frontmatter description is no broader than activate_when."),
+        check("required_outputs_produced", "all required outputs are produced."),
+        check("call_markers_have_how", "all call_* markers include how."),
+        check("formal_human_gates_structured", "formal human approval points use structured gates and call_human only when the concrete question appears in prose."),
+        check("graph_edges_valid", "all graph edges reference existing nodes."),
+        check("loops_terminate", "all loops have termination conditions."),
+    ],
+    on_failure="report",
+)
 ```

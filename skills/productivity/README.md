@@ -16,4 +16,5 @@ Reachable only when you type them (`disable-model-invocation: true`).
 Model- or user-reachable (rich trigger phrasing so the model can reach for them).
 
 - **[brainstorming](./brainstorming/SKILL.md)** — Explore user intent, requirements, and design before implementation.
+- **[create-dsl-skills](./create-dsl-skills/SKILL.md)** — Write or rewrite skills using a formal Python Skill Contract DSL and its `contract.pyi` spec.
 - **[grilling](./grilling/SKILL.md)** — Interview the user relentlessly about a plan or design until every branch of the decision tree is resolved.

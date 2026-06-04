@@ -32,6 +32,7 @@
     "./skills/misc/scaffold-exercises",
     "./skills/misc/setup-pre-commit",
     "./skills/productivity/brainstorming",
+    "./skills/productivity/create-dsl-skills",
     "./skills/productivity/grill-me",
     "./skills/productivity/grilling",
     "./skills/productivity/handoff",

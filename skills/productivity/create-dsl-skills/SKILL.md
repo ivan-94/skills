@@ -11,7 +11,6 @@ skill(
     purpose="使用 Python Skill Contract DSL 编写、重写和审查 Agent Skill。",
     summary="产出以 contract.pyi 为规范本体、以 Python-shaped 契约块为正文的 SKILL.md。",
     version="0.1.0",
-    short_description="用 Python DSL 契约编写和审查 Agent Skill。",
     tags=["skills", "dsl", "agent-instructions", "contract"],
     compatibility=["codex", "claude", "generic-agent"],
 )
@@ -440,7 +439,6 @@ examples([
             name="skill-audit",
             purpose="Review agent skills from an agent-usage perspective.",
             summary="Find trigger, workflow, ambiguity, and resource defects.",
-            short_description="Review SKILL.md files and referenced resources.",
             tags=["skills", "review", "agent-instructions"],
         )
 

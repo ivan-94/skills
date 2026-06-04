@@ -135,7 +135,6 @@ def skill(
     summary: str | None = None,
     version: str | None = None,
     owner: str | None = None,
-    short_description: str | None = None,
     tags: list[str] | None = None,
     compatibility: list[str] | None = None,
     license: str | None = None,

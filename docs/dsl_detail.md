@@ -185,7 +185,6 @@ skill(
     summary: str = None,
     version: str = None,
     owner: str = None,
-    short_description: str = None,
     tags: list[str] = None,
     compatibility: list[str] = None,
     license: str = None,
@@ -225,7 +224,7 @@ version
 owner
 # 团队、个人或组织。可选。
 
-short_description / tags / compatibility / license / experimental / custom
+tags / compatibility / license / experimental / custom
 # 非行为性元信息。可选；用于目录、安装器或人类浏览，不应承载 workflow 规则。
 ```
 
@@ -1682,7 +1681,6 @@ validation(
 skill(
     name="example-skill",
     purpose="Describe the exact reusable capability this skill gives the agent.",
-    short_description="Short human-facing description.",
     tags=["example", "agent-workflow"],
 )
 

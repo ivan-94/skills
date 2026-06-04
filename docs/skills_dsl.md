@@ -485,7 +485,7 @@ The previous response produced a full reference. Keep using or refine the follow
 ### Top-level
 
 ```py
-skill(name, purpose, summary=None, version=None, owner=None, short_description=None, tags=None, compatibility=None, license=None, experimental=False, custom=None)
+skill(name, purpose, summary=None, version=None, owner=None, tags=None, compatibility=None, license=None, experimental=False, custom=None)
 contract_policy(priority="contract_wins", prose_role="explanation_only", executable=False)
 ```
 

@@ -11,9 +11,6 @@ skill(
     purpose="使用 Python Skill Contract DSL 编写、重写和审查 Agent Skill。",
     summary="产出以 contract.pyi 为规范本体、以 Python-shaped 契约块为正文的 SKILL.md。",
     version="0.1.0",
-)
-
-metadata(
     short_description="用 Python DSL 契约编写和审查 Agent Skill。",
     tags=["skills", "dsl", "agent-instructions", "contract"],
     compatibility=["codex", "claude", "generic-agent"],
@@ -36,34 +33,6 @@ do_not_activate_when([
     "用户询问普通 Python 编程，且与 Skill Contract DSL 无关",
     "用户要求修改仓库代码功能，但没有要求创建或更新 Skill",
 ])
-
-activation_keywords(
-    include=[
-        "SKILL.md",
-        "Skill Contract DSL",
-        "contract.pyi",
-        "DSL skill",
-        "Agent Skill",
-    ],
-    exclude=[
-        "execute skill",
-        "generic Python script",
-        "generic Markdown proofreading",
-    ],
-)
-
-activation_examples(
-    positive=[
-        "用 DSL 写一个 skill",
-        "把这个 SKILL.md 改成 contract.pyi 规范的形式",
-        "审查这个 DSL contract 是否覆盖了 workflow",
-    ],
-    negative=[
-        "执行这个 PDF skill 提取表格",
-        "帮我润色这篇普通文章",
-        "写一个和 Skill DSL 无关的 Python 脚本",
-    ],
-)
 
 inputs(
     required=[
@@ -471,9 +440,6 @@ examples([
             name="skill-audit",
             purpose="Review agent skills from an agent-usage perspective.",
             summary="Find trigger, workflow, ambiguity, and resource defects.",
-        )
-
-        metadata(
             short_description="Review SKILL.md files and referenced resources.",
             tags=["skills", "review", "agent-instructions"],
         )

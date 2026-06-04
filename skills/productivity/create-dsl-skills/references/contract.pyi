@@ -135,13 +135,6 @@ def skill(
     summary: str | None = None,
     version: str | None = None,
     owner: str | None = None,
-) -> None:
-    """Required exactly once. Declares the skill identity and reusable capability."""
-    ...
-
-
-def metadata(
-    *,
     short_description: str | None = None,
     tags: list[str] | None = None,
     compatibility: list[str] | None = None,
@@ -149,7 +142,7 @@ def metadata(
     experimental: bool = False,
     custom: dict[str, JSONValue] | None = None,
 ) -> None:
-    """Optional non-behavioral metadata for humans, installers, or catalogs."""
+    """Required exactly once. Declares the skill identity, reusable capability, and optional catalog metadata."""
     ...
 
 
@@ -173,24 +166,6 @@ def do_not_activate_when(
     priority: Literal["higher_than_activate_when"] = "higher_than_activate_when",
 ) -> None:
     """Negative trigger boundaries. These override activate_when when both match."""
-    ...
-
-
-def activation_keywords(
-    *,
-    include: list[str],
-    exclude: list[str] | None = None,
-) -> None:
-    """Optional trigger calibration keywords. Do not replace activate_when."""
-    ...
-
-
-def activation_examples(
-    *,
-    positive: list[str],
-    negative: list[str],
-) -> None:
-    """Example user prompts that should or should not activate the skill."""
     ...
 
 
@@ -237,6 +212,8 @@ def output(
     type: object = Text,
     description: str | None = None,
     format: str | None = None,
+    template: str | None = None,
+    required_sections: list[str] | None = None,
     success_criteria: list[str] | None = None,
 ) -> OutputSpec:
     """Declares one output and how a reviewer can recognize success."""
@@ -739,16 +716,6 @@ def example(
 # ---------------------------------------------------------------------------
 # Output and review helpers
 # ---------------------------------------------------------------------------
-
-def output_format(
-    *,
-    name: str,
-    template: str | None = None,
-    required_sections: list[str] | None = None,
-) -> None:
-    """Declares the user-visible response shape."""
-    ...
-
 
 def severity_levels(
     levels: list[LevelSpec],

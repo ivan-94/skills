@@ -106,7 +106,7 @@ safety_policy(
 
 quality_bar(
     must=[
-        "Contract stays lightweight: no activation_examples, examples, output_format, severity_levels, or review_dimensions unless the user asks for them.",
+        "Contract stays lightweight: no teaching examples, severity_levels, or review_dimensions unless the user asks for them.",
         "decision_rules only describe user-visible CLI choices such as dry-run/send and payload style.",
         "Script target is skill-relative; call_script how explains the host-root command when needed.",
         "Real external sends have an explicit authorization input and safety_policy approval boundary.",

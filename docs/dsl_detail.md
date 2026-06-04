@@ -37,7 +37,6 @@ If this contract conflicts with later prose, this contract wins.
 
 ```py
 skill(...)
-metadata(...)
 
 activate_when([...])
 do_not_activate_when([...])
@@ -186,6 +185,12 @@ skill(
     summary: str = None,
     version: str = None,
     owner: str = None,
+    short_description: str = None,
+    tags: list[str] = None,
+    compatibility: list[str] = None,
+    license: str = None,
+    experimental: bool = False,
+    custom: dict = None,
 )
 ```
 
@@ -197,6 +202,8 @@ skill(
     purpose="Create durable composable CLIs for future agent use.",
     summary="Builds installable command-line tools with stable JSON output.",
     version="0.1.0",
+    tags=["cli", "agent-tooling"],
+    compatibility=["codex", "generic-agent"],
 )
 ```
 
@@ -217,39 +224,14 @@ version
 
 owner
 # 团队、个人或组织。可选。
+
+short_description / tags / compatibility / license / experimental / custom
+# 非行为性元信息。可选；用于目录、安装器或人类浏览，不应承载 workflow 规则。
 ```
 
 ---
 
-## 4.2 metadata()
-
-定义非行为性元信息。
-
-```py
-metadata(
-    short_description: str = None,
-    tags: list[str] = None,
-    compatibility: list[str] = None,
-    license: str = None,
-    experimental: bool = False,
-    custom: dict = None,
-)
-```
-
-示例：
-
-```py
-metadata(
-    short_description="Review and improve SKILL.md files.",
-    tags=["skills", "review", "agent-instructions"],
-    compatibility=["codex", "claude", "generic-agent"],
-    experimental=True,
-)
-```
-
----
-
-## 4.3 contract_policy()
+## 4.2 contract_policy()
 
 定义 DSL 与正文之间的优先级。
 
@@ -327,57 +309,6 @@ do_not_activate_when([
     "user asks for general Markdown proofreading",
     "user asks for generic prompt advice without a concrete skill file",
 ])
-```
-
----
-
-## 5.3 activation_keywords()
-
-定义辅助触发关键词。
-
-```py
-activation_keywords(
-    include: list[str],
-    exclude: list[str] = None,
-)
-```
-
-示例：
-
-```py
-activation_keywords(
-    include=["SKILL.md", "skill review", "agent instruction", "slash command"],
-    exclude=["execute skill", "run skill", "general proofreading"],
-)
-```
-
----
-
-## 5.4 activation_examples()
-
-用真实用户话术校准触发。
-
-```py
-activation_examples(
-    positive: list[str],
-    negative: list[str],
-)
-```
-
-示例：
-
-```py
-activation_examples(
-    positive=[
-        "帮我审查这个 SKILL.md",
-        "这个 skill 有哪些歧义？",
-        "帮我重写这个 agent 指令",
-    ],
-    negative=[
-        "用这个 skill 帮我处理 PDF",
-        "帮我润色这篇文章",
-    ],
-)
 ```
 
 ---
@@ -492,6 +423,8 @@ output(
     type: Type = Text,
     description: str = None,
     format: str = None,
+    template: str = None,
+    required_sections: list[str] = None,
     success_criteria: list[str] = None,
 )
 ```
@@ -503,6 +436,7 @@ output(
     "review_report",
     type=Text,
     format="severity_grouped_markdown",
+    required_sections=["Overall judgment", "Findings", "Suggested fixes"],
     success_criteria=[
         "each issue includes evidence",
         "each issue explains agent impact",
@@ -1649,49 +1583,9 @@ assertion(
 
 ---
 
-# 18. 输出格式 API
+# 18. 审查辅助 API
 
-## 18.1 output_format()
-
-定义用户可见输出结构。
-
-```py
-output_format(
-    name: str,
-    template: str,
-    required_sections: list[str] = None,
-)
-```
-
-示例：
-
-```py
-output_format(
-    name="skill_review_report",
-    required_sections=[
-        "Overall judgment",
-        "Critical issues",
-        "Major issues",
-        "Minor issues",
-        "Suggested rewrite",
-    ],
-    template="""
-# Overall judgment
-
-# Critical issues
-
-# Major issues
-
-# Minor issues
-
-# Suggested rewrite
-""",
-)
-```
-
----
-
-## 18.2 severity_levels()
+## 18.1 severity_levels()
 
 定义问题等级。
 
@@ -1713,7 +1607,7 @@ severity_levels([
 
 ---
 
-## 18.3 level()
+## 18.2 level()
 
 ```py
 level(
@@ -1788,9 +1682,6 @@ validation(
 skill(
     name="example-skill",
     purpose="Describe the exact reusable capability this skill gives the agent.",
-)
-
-metadata(
     short_description="Short human-facing description.",
     tags=["example", "agent-workflow"],
 )

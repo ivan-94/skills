@@ -485,8 +485,7 @@ The previous response produced a full reference. Keep using or refine the follow
 ### Top-level
 
 ```py
-skill(name, purpose, summary=None, version=None, owner=None)
-metadata(short_description=None, tags=None, compatibility=None, license=None, experimental=False, custom=None)
+skill(name, purpose, summary=None, version=None, owner=None, short_description=None, tags=None, compatibility=None, license=None, experimental=False, custom=None)
 contract_policy(priority="contract_wins", prose_role="explanation_only", executable=False)
 ```
 
@@ -495,8 +494,6 @@ contract_policy(priority="contract_wins", prose_role="explanation_only", executa
 ```py
 activate_when(conditions, match="any", strength="normal")
 do_not_activate_when(conditions, priority="higher_than_activate_when")
-activation_keywords(include, exclude=None)
-activation_examples(positive, negative)
 ```
 
 ### Inputs / outputs
@@ -506,7 +503,7 @@ inputs(required, optional=None, ask_when_missing=True)
 input(name, type=Text, description=None, default=None, examples=None, required=True, required_when=None)
 
 outputs(required, optional=None)
-output(name, type=Text, description=None, format=None, success_criteria=None)
+output(name, type=Text, description=None, format=None, template=None, required_sections=None, success_criteria=None)
 ```
 
 ### Resources
@@ -735,11 +732,9 @@ test_case(id, prompt, files=None, expected=None, assertions=None)
 assertion(name, condition, evidence=None)
 ```
 
-### Output format
+### Review helpers
 
 ```py
-output_format(name, template, required_sections=None)
-
 severity_levels(levels)
 
 level(name, meaning)

@@ -55,6 +55,13 @@ resources(
     ],
 )
 
+decision_rules([
+    when("user asks for dry-run, preview, or validation only", then="run the CLI in dry-run mode and do not send"),
+    when("user explicitly authorizes a real send", then="run the CLI send path with the approved content and destination"),
+    when("message format is raw, text, card, or business payload", then="preserve the requested payload style instead of normalizing it into plain text"),
+    prefer("dry-run", over="send", reason="help or dry-run is safer when CLI flags or payload shape are uncertain"),
+])
+
 workflow([
     step("read_reference", "Read references/lark-webhook.md for payload and safety rules."),
     step(
@@ -99,7 +106,8 @@ safety_policy(
 
 quality_bar(
     must=[
-        "Contract stays compact: no activation_examples, examples, output_format, severity_levels, or review_dimensions unless the user asks for full density.",
+        "Contract stays lightweight: no activation_examples, examples, output_format, severity_levels, or review_dimensions unless the user asks for them.",
+        "decision_rules only describe user-visible CLI choices such as dry-run/send and payload style.",
         "Script target is skill-relative; call_script how explains the host-root command when needed.",
         "Real external sends have an explicit authorization input and safety_policy approval boundary.",
     ],

@@ -120,6 +120,8 @@ FailurePolicy: TypeAlias = Literal[
 FallbackApproval: TypeAlias = Literal["always", "when_destructive", "never"]
 SeverityName: TypeAlias = Literal["critical", "major", "minor", "info"]
 SkillCallMode: TypeAlias = Literal["compose", "consult", "delegate", "handoff"]
+SubagentContext: TypeAlias = Literal["fork"] | str
+SubagentEffort: TypeAlias = Literal["low", "medium", "high"]
 
 
 # ---------------------------------------------------------------------------
@@ -214,8 +216,9 @@ def input(
     default: object | None = None,
     examples: list[object] | None = None,
     required: bool = True,
+    required_when: str | None = None,
 ) -> InputSpec:
-    """Declares one agent-facing input. Do not use for implementation internals."""
+    """Declares one agent-facing input. required_when makes a required=False input conditionally mandatory."""
     ...
 
 
@@ -241,7 +244,7 @@ def output(
 
 
 # ---------------------------------------------------------------------------
-# Resources, environment, and tools
+# Resources and environment
 # ---------------------------------------------------------------------------
 
 def resources(
@@ -316,16 +319,6 @@ def env(
     ...
 
 
-def tools(
-    *,
-    required: list[str] | None = None,
-    preferred: list[str] | None = None,
-    forbidden: list[str] | None = None,
-) -> None:
-    """Declares tool requirements and preferences for the agent."""
-    ...
-
-
 # ---------------------------------------------------------------------------
 # Embedded call markers
 # ---------------------------------------------------------------------------
@@ -373,6 +366,21 @@ def call_skill(
     on_failure: str | None = None,
 ) -> CallMarker:
     """Marks use of another skill inside natural language. mode clarifies whether this is composition, consultation, delegation, or handoff."""
+    ...
+
+
+def call_subagent(
+    role: str,
+    task: str,
+    how: str,
+    *,
+    context: SubagentContext = "fork",
+    effort: SubagentEffort | None = None,
+    result_path: str | None = None,
+    expect: str | None = None,
+    on_failure: str | None = None,
+) -> CallMarker:
+    """Marks a subagent delegation inside natural language. context='fork' inherits current context; a string describes isolated context to pass."""
     ...
 
 

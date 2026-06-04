@@ -215,7 +215,6 @@ OpenAI skills 经常定义：
 ```py
 environment(...)
 env(...)
-tools(...)
 script(...)
 reference(...)
 asset(...)
@@ -504,7 +503,7 @@ activation_examples(positive, negative)
 
 ```py
 inputs(required, optional=None, ask_when_missing=True)
-input(name, type=Text, description=None, default=None, examples=None, required=True)
+input(name, type=Text, description=None, default=None, examples=None, required=True, required_when=None)
 
 outputs(required, optional=None)
 output(name, type=Text, description=None, format=None, success_criteria=None)
@@ -522,14 +521,28 @@ reference(path, purpose=None, when=None, read_strategy="on_demand", grep_pattern
 asset(path, purpose=None, when=None, copy_policy="copy_when_needed")
 ```
 
-### Environment / tools
+### Environment
 
 ```py
 environment(variables=None, commands=None, dependencies=None, network="unknown", filesystem="workspace")
 
 env(name, default=None, required=False, secret=False, purpose=None)
+```
 
-tools(required=None, preferred=None, forbidden=None)
+### Embedded call markers
+
+```py
+call_script(target, how, expect=None, on_failure=None)
+
+call_tool(name, how, expect=None, on_failure=None)
+
+call_mcp(server, tool, how, expect=None, on_failure=None)
+
+call_skill(name, how, mode=None, expect=None, on_failure=None)
+
+call_subagent(role, task, how, context="fork", effort=None, result_path=None, expect=None, on_failure=None)
+
+call_human(request, how, expect=None, on_failure=None)
 ```
 
 ### Simple workflow

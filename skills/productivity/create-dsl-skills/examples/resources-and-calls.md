@@ -1,6 +1,6 @@
 # Resources And Calls Example
 
-Use this when the skill declares bundled scripts, references, assets, environment assumptions, tool preferences, embedded call markers, validation, and checks.
+Use this when the skill declares bundled scripts, references, assets, environment assumptions, embedded call markers, subagent delegation, validation, and checks.
 
 `call_script(target, ...)` uses a skill-relative `target` such as `scripts/render_docx.py`. If the real command must run from the host project root, describe that command in `how`; do not put host-root paths in `target`.
 
@@ -48,12 +48,6 @@ environment(
     filesystem="workspace",
 )
 
-tools(
-    required=["python3"],
-    preferred=["rg"],
-    forbidden=["destructive filesystem commands without user request"],
-)
-
 workflow([
     step(
         "render_pages",
@@ -79,7 +73,26 @@ workflow([
         )}.
         """,
     ),
+    step(
+        "independent_review",
+        f"""
+        If a second opinion would reduce review risk, use {call_subagent(
+            "layout-reviewer",
+            "review the rendered page images against the layout rubric",
+            how="spawn a read-only reviewer with the rendered page images and references/layout-rubric.md; ask for findings only, not edits",
+            context="page_images plus references/layout-rubric.md only",
+            effort="medium",
+            expect="layout findings with evidence and severity",
+            on_failure="continue with parent review and state that subagent review was unavailable",
+        )}.
+        """,
+        reads=["page_images"],
+    ),
 ])
+
+safety_policy(
+    must_not=["Do not run destructive filesystem commands unless the user explicitly requested them."],
+)
 
 validation(
     [

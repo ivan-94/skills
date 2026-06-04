@@ -47,7 +47,6 @@ outputs(...)
 
 resources(...)
 environment(...)
-tools(...)
 
 workflow(...)
 # 或
@@ -426,6 +425,7 @@ input(
     default = None,
     examples: list = None,
     required: bool = True,
+    required_when: str = None,
 )
 ```
 
@@ -437,6 +437,18 @@ input(
     type=Directory | File | Text,
     description="The skill directory, SKILL.md path, or pasted SKILL.md content.",
     examples=["./skills/pdf", "./SKILL.md", "pasted markdown"],
+)
+```
+
+条件必填输入使用 `required=False` 配合 `required_when`。`required_when` 只描述触发条件，不替代 `ask_when_missing`、`ask_user`、`call_human` 或审批闸门。
+
+```py
+input(
+    "result_path",
+    type=Path,
+    description="父 Agent 派发子 Agent 时，子 Agent 写入结果的路径。",
+    required=False,
+    required_when="当前 Skill 以父 Agent 身份派发子 Agent，并要求下游 Agent 产出可读取的交付物",
 )
 ```
 
@@ -676,27 +688,34 @@ env(
 
 ---
 
-## 8.3 tools()
+## 8.3 调用标记
 
-声明 Agent 可用或推荐使用的工具。
-
-```py
-tools(
-    required: list[str] = None,
-    preferred: list[str] = None,
-    forbidden: list[str] = None,
-)
-```
-
-示例：
+`call_*` 只用于自然语言字符串中的具体调用点，不是资源声明，也不执行调用。
 
 ```py
-tools(
-    required=["gh"],
-    preferred=["python", "jq"],
-    forbidden=["raw non-GET requests without user approval"],
+call_script(target: str, how: str, expect: str = None, on_failure: str = None)
+
+call_tool(name: str, how: str, expect: str = None, on_failure: str = None)
+
+call_mcp(server: str, tool: str, how: str, expect: str = None, on_failure: str = None)
+
+call_skill(name: str, how: str, mode: str = None, expect: str = None, on_failure: str = None)
+
+call_subagent(
+    role: str,
+    task: str,
+    how: str,
+    context: "fork" | str = "fork",
+    effort: "low" | "medium" | "high" = None,
+    result_path: str = None,
+    expect: str = None,
+    on_failure: str = None,
 )
+
+call_human(request: str, how: str, expect: str = None, on_failure: str = None)
 ```
+
+`call_subagent(..., context="fork")` 表示子 Agent 完全继承当前上下文；`context` 为普通字符串时表示隔离上下文，只传该字符串描述的材料。文件系统隔离、worktree、只读等执行边界写在 `how` 中。
 
 ---
 

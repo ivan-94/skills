@@ -1,6 +1,6 @@
 ---
 name: create-dsl-skills
-description: 使用 Python Skill Contract DSL 编写、重写或审查 Agent Skill。用于用户要求创建 SKILL.md、把现有 Skill 改写为 DSL、审查 DSL 契约、查看 DSL spec/guide，或要求本 Skill 自举改写。
+description: 使用 Python Skill Contract DSL 编写、重写或审查 Agent Skill。用于用户要求创建 SKILL.md、把现有 Skill 改写为 DSL、审查 DSL 契约，或查看 DSL spec/guide。
 ---
 
 ```python
@@ -8,14 +8,14 @@ from skill_contract import *
 
 skill(
     name="create-dsl-skills",
-    purpose="使用 Python Skill Contract DSL 编写、重写、审查和自举 Agent Skill。",
+    purpose="使用 Python Skill Contract DSL 编写、重写和审查 Agent Skill。",
     summary="产出以 contract.pyi 为规范本体、以 Python-shaped 契约块为正文的 SKILL.md。",
     version="0.1.0",
 )
 
 metadata(
     short_description="用 Python DSL 契约编写和审查 Agent Skill。",
-    tags=["skills", "dsl", "agent-instructions", "contract", "self-bootstrap"],
+    tags=["skills", "dsl", "agent-instructions", "contract"],
     compatibility=["codex", "claude", "generic-agent"],
 )
 
@@ -25,7 +25,6 @@ activate_when(
         "用户要求把现有 Skill 改写为 DSL 契约形式",
         "用户要求审查 DSL-backed Skill、contract block、contract.pyi 或 examples",
         "用户询问 Skill Contract DSL 的 spec、guide、语法或写法",
-        "用户要求 create-dsl-skills 自举、dogfood、完全 DSL 化或中文化",
     ],
     match="any",
     strength="strong",
@@ -45,9 +44,6 @@ activation_keywords(
         "contract.pyi",
         "DSL skill",
         "Agent Skill",
-        "自举",
-        "dogfood",
-        "完全 DSL",
     ],
     exclude=[
         "execute skill",
@@ -61,8 +57,6 @@ activation_examples(
         "用 DSL 写一个 skill",
         "把这个 SKILL.md 改成 contract.pyi 规范的形式",
         "审查这个 DSL contract 是否覆盖了 workflow",
-        "create-dsl-skills 可以完全自举吗",
-        "把这个 SKILL.md 完全改成中文 DSL",
     ],
     negative=[
         "执行这个 PDF skill 提取表格",
@@ -76,7 +70,7 @@ inputs(
         input(
             "skill_task",
             type=NaturalLanguage,
-            description="用户关于创建、重写、审查或自举 DSL-backed Skill 的请求。",
+            description="用户关于创建、重写或审查 DSL-backed Skill 的请求。",
         ),
     ],
     optional=[
@@ -94,13 +88,6 @@ inputs(
             "constraints",
             type=Text,
             description="用户给出的范围、风格、语言、触发、兼容性或提交边界要求。",
-        ),
-        input(
-            "contract_density",
-            type=Text,
-            description="可选的 contract 密度：compact 适合简单脚本型 Skill，full 适合复杂工作流、审查词汇或教学示例。",
-            default="auto",
-            examples=["auto", "compact", "full"],
         ),
     ],
     ask_when_missing=True,
@@ -147,7 +134,7 @@ resources(
     scripts=[
         script(
             "scripts/validate_contract.py",
-            purpose="机械验证 SKILL.md 中的 Python Skill Contract DSL：code block 数量、AST 语法、DSL API、frontmatter name、resources 路径和 call_* 位置。",
+            purpose="机械验证 SKILL.md 中的 Python Skill Contract DSL：默认使用本 Skill 的 contract.pyi，目标 Skill 不需要自带 spec。",
             when="写入或改写 DSL-backed Skill 后",
             interface="python3 scripts/validate_contract.py <skill-dir> --examples",
             run_help_first=True,
@@ -159,24 +146,24 @@ resources(
     references=[
         reference(
             "SKILL.md",
-            purpose="本 Skill 的自举目标和主契约；当用户要求 dogfood、自举或完全 DSL 化时必须读取。",
+            purpose="本 Skill 的主契约；当用户要求审查或修改 create-dsl-skills 自身时必须读取。",
             when="审查或修改 create-dsl-skills 自身",
             read_strategy="always",
         ),
         reference(
             "references/contract.pyi",
             purpose="DSL 的规范本体；所有函数、参数、类型和静态期望以此文件为准。",
-            when="开始编写、重写、审查或自举任何 contract block 之前",
+            when="开始编写、重写或审查任何 contract block 之前",
             read_strategy="always",
         ),
         reference(
             "examples/resources-and-calls.md",
-            purpose="resources、environment、tools、call_*、validation 和 check 示例。",
+            purpose="resources、environment、call_*、validation 和 check 示例。",
             when="Skill 需要脚本、参考资料、工具调用、MCP、验证命令或环境假设",
         ),
         reference(
             "examples/cli-backed-skill.md",
-            purpose="简单 CLI-backed Skill 的 compact contract 模板；适合一个 CLI、一个 reference、少量安全边界的 Skill。",
+            purpose="简单 CLI-backed Skill 的轻量 contract 模板；适合一个 CLI、一个 reference、少量安全边界和少量用户可见 decision_rules 的 Skill。",
             when="Skill 主要包装一个脚本或 CLI，且没有复杂审查词汇、状态机或多阶段工作流",
         ),
         reference(
@@ -208,32 +195,25 @@ environment(
     filesystem="workspace",
 )
 
-tools(
-    required=["python3"],
-    preferred=["rg", "git diff --check"],
-    forbidden=["git commit without explicit user request", "destructive git commands"],
-)
-
 workflow(
     [
-        step("choose_density", "选择 contract 密度：简单脚本型、单 CLI、少量安全边界默认 compact；复杂流程、审查词汇、状态机、教学型 Skill 才用 full。", reads=["skill_task", "source_map", "behavior_inventory", "contract_density"], writes=["density"]),
-        step("draft_contract", "基于新需求或既有行为库存定义 activation、interface、resources、behavior shape、call markers、safety 和 validation。", reads=["source_map", "behavior_inventory", "density"], writes=["contract_draft"]),
-        step("compress_contract", "写入前压缩去重：如果信息已在 modes、workflow、safety_policy、quality_bar 或 validation 中表达，不要再复制到 decision_rules、failure_modes、output_format 或 examples。", reads=["density", "contract_draft"], writes=["contract_draft"]),
+        step("draft_contract", "基于新需求或既有行为库存定义 activation、interface、resources、behavior shape、decision_rules、call markers、safety 和 validation 等等", reads=["skill_task", "source_map", "behavior_inventory"], writes=["contract_draft"]),
+        step("run_semantic_review", "按 quality_bar、validation checks、review_dimensions 和用户约束做语义审查。", reads=["contract_draft"], writes=["review_notes"]),
+        step("apply_occams_razor", "在语义审查后做减法：删除重复、冗余、弱引导、违反 review_dimensions 的内容", reads=["contract_draft", "review_notes"], writes=["contract_draft"]),
         step("write_skill", "生成 frontmatter 和一个 Python DSL contract block；Markdown prose 只保留用户明确要求的非行为性说明。", produces=["skill_markdown", "frontmatter_description"]),
         step(
             "run_mechanical_validation",
             f"""
-            写入后运行内置验证脚本；这只证明机械结构正确，不等于语义审查通过。
+            写入后运行内置验证脚本；ok=true 只表示没有 hard mechanical errors，不等于语义审查通过。
             使用 {call_script(
                 "scripts/validate_contract.py",
-                how="从当前 Skill 目录执行；传入目标 Skill 目录，必要时加 --examples 解析 examples/*.md",
-                expect="JSON mechanical validation report with ok=true",
+                how="从 create-dsl-skills 目录执行；传入目标 Skill 目录，默认使用本 Skill 的 references/contract.pyi，必要时加 --examples 解析 examples/*.md",
+                expect="JSON mechanical validation report with ok=true and summary.errors=0",
                 on_failure="报告失败项，不提交，不把机械验证失败说成成功",
             )}。
             """,
             produces=["validation_evidence"],
         ),
-        step("run_semantic_review", "再按 quality_bar、validation checks、review_dimensions 和用户约束做语义审查。", produces=["review_notes"]),
     ],
     name="build_contract",
 )
@@ -246,7 +226,7 @@ modes(
             workflow=[
                 step("read_spec", "读取 references/contract.pyi，确认可用 API、类型和静态审查期望。", writes=["dsl_api"]),
                 step("gather_sources", "读取用户给出的文档、脚本、现有说明或目标目录；只加载与当前 Skill 行为相关的材料。", reads=["skill_task", "source_material"], writes=["source_map"]),
-                step("build_from_sources", "继续执行 build_contract：选择密度、起草 contract、压缩、写入、机械验证和语义审查。", reads=["source_map"], produces=["skill_markdown", "frontmatter_description", "review_notes", "validation_evidence"]),
+                step("build_from_sources", "继续执行 build_contract：起草 contract、语义审查、奥卡姆剃刀压缩、写入和机械验证。", reads=["source_map"], produces=["skill_markdown", "frontmatter_description", "review_notes", "validation_evidence"]),
             ],
             description="从需求或资料创建新的 DSL Skill。",
         ),
@@ -271,7 +251,7 @@ modes(
                     when="目标不明确、会改多个文件、会删除资源、用户只要求草稿/审查，或会修改 contract.pyi API",
                     ask_user="确认是否继续高风险 rewrite。",
                 ),
-                step("build_from_inventory", "继续执行 build_contract：选择密度、翻译行为库存、压缩、写入、机械验证和语义审查；明确单文件 rewrite 不需要重复确认。", reads=["behavior_inventory"], produces=["skill_markdown", "frontmatter_description", "review_notes", "validation_evidence"]),
+                step("build_from_inventory", "继续执行 build_contract：翻译行为库存、语义审查、奥卡姆剃刀压缩、写入和机械验证；明确单文件 rewrite 不需要重复确认。", reads=["behavior_inventory"], produces=["skill_markdown", "frontmatter_description", "review_notes", "validation_evidence"]),
             ],
             description="把已有 Skill 改写为 DSL 契约形式。",
             forbidden=["silent behavior deletion", "scope expansion without user approval"],
@@ -291,64 +271,23 @@ modes(
             description="审查 DSL Skill 的触发、接口、控制流、调用标记、验证质量和品味审查维度。",
             forbidden=["editing during review-only requests"],
         ),
-        mode(
-            "self_bootstrap",
-            trigger="用户要求本 SKILL.md 完全使用 DSL 编写、自举、dogfood 或中文化",
-            workflow=[
-                step("load_self_contract", "读取本 SKILL.md、references/contract.pyi 和 examples/*.md；把 contract.pyi 作为规范本体。", writes=["self_surface"]),
-                step("remove_prose_guide", "将正文收敛为 frontmatter 后的单个 Python DSL contract block；把原 prose guide 规则转写进 DSL 参数字符串。", reads=["self_surface"], writes=["self_contract_draft"]),
-                step("preserve_progressive_disclosure", "主文件只放核心 contract；复杂语法和示例继续放 examples/*.md，并在 resources 中说明何时读取。", reads=["self_contract_draft"], writes=["self_contract_draft"]),
-                step("encode_self_modes", "明确 create、rewrite、review、self_bootstrap 四种模式及其边界。", reads=["self_contract_draft"], writes=["self_contract_draft"]),
-                step("compress_contract", "写入前压缩去重：主文件保留核心规则和核心例子，避免把 examples/*.md 的全部内容复制进 SKILL.md。", reads=["self_contract_draft"], writes=["self_contract_draft"]),
-                step(
-                    "validate_python_shape",
-                    f"""
-                    使用内置验证脚本验证 contract.pyi、SKILL.md 和 examples/*.md。
-                    使用 {call_script(
-                        "scripts/validate_contract.py",
-                        how="在 create-dsl-skills 目录执行 python3 scripts/validate_contract.py . --examples",
-                        expect="JSON validation report with ok=true",
-                        on_failure="报告解析失败位置，不提交、不继续扩大修改",
-                    )}。
-                    """,
-                    produces=["validation_evidence"],
-                ),
-                step(
-                    "validate_text_surface",
-                    f"""
-                    检查是否还残留与 DSL contract 重复的主文件 prose guide。
-                    使用 {call_tool(
-                        "rg",
-                        how="搜索 SKILL.md 中 Core Rule、Workflow、Writing Rules、Review Checklist 等旧 prose section 标题",
-                        expect="除 frontmatter 和 Python code fence 外，不存在旧 guide section",
-                        on_failure="报告残留标题并等待用户决定是否继续清理",
-                    )}。
-                    """,
-                    produces=["validation_evidence"],
-                ),
-                step("report_self_bootstrap", "报告 self-bootstrap 改动、验证结果、保留的 examples 和未提交状态。", produces=["review_notes", "validation_evidence"]),
-            ],
-            description="用本 DSL 重写本 Skill，使 SKILL.md 正文由 DSL contract 承载。",
-            forbidden=["modifying contract.pyi signatures without explicit user request", "committing without explicit user request"],
-        ),
     ],
     default="create",
-    selection="按用户请求选择模式；如果目标是本 Skill 自身或用户说自举、dogfood、完全 DSL 化、中文化，选择 self_bootstrap。",
+    selection="按用户请求选择模式；如果目标是本 Skill 自身，也按普通 rewrite 或 review 处理。",
 )
 
 decision_rules([
-    when("Skill 是简单脚本型、单 CLI、单 reference、少量安全边界或 lark-notify 这类通知/包装工具", then="选择 compact 密度"),
-    when("Skill 需要教学型示例、审查词汇、多 mode、状态机、复杂图工作流或跨 Skill 委托", then="选择 full 密度"),
-    when("密度为 compact", then="只保留 identity、activation、inputs/outputs、resources、workflow 或 modes、safety_policy、quality_bar 和 validation"),
-    when("密度为 full", then="可以加入 activation_examples、examples、output_format、severity_levels、review_dimensions 和高级 references；但主文件只保留当前任务真正需要的块"),
+    when("Skill 是简单脚本型、单 CLI、单 reference 或少量安全边界", then="先表达真实行为，再通过 apply_occams_razor 压缩成轻量 contract"),
+    when("简单 Skill 存在用户可见选择，例如 raw/text/card、dry-run/send 或普通报告/业务 payload", then="保留轻量 decision_rules，不为了压缩删除真实分支"),
+    when("Skill 需要教学型示例、审查词汇、多 mode、状态机、复杂图工作流或跨 Skill 委托", then="保留必要高级结构，但仍在语义审查后执行奥卡姆剃刀"),
     when("任务主要是线性创建或改写", then="使用 workflow 或 mode 内联 workflow 表达，不要引入 workflow_graph"),
     when("任务需要 DAG、并行、join、重试或非线性终止", then="读取 examples/graph-workflow.md 并使用 workflow_graph"),
     when("任务需要持续人工审查、批准或生命周期状态", then="读取 examples/human-review-vocabulary.md 并使用 state_machine"),
     when("任务需要重复评估多个 case", then="读取 examples/iteration-aggregation.md 并使用 loop、map_each 或 reduce"),
-    when("Skill 是 CLI-backed compact 形态", then="读取 examples/cli-backed-skill.md，不套用 full 档通用模板"),
+    when("Skill 是 CLI-backed 轻量形态", then="读取 examples/cli-backed-skill.md，不套用复杂审查或教学模板"),
     prefer("frontmatter description derived from activate_when", over="generic marketing wording", reason="description 是正文加载前的主要触发入口"),
     prefer("examples/*.md on demand", over="copying every advanced example into SKILL.md", reason="保持主 Skill 紧凑并符合 progressive disclosure"),
-    prefer("compact", over="full", reason="除非复杂性真实存在，否则默认避免生成偏重 contract"),
+    prefer("post_review_compression", over="preselected_shape", reason="先表达真实行为，再用奥卡姆剃刀删除重复和冗余"),
 ])
 
 failure_modes([
@@ -380,7 +319,7 @@ safety_policy(
         "不要把 call_human 当成 ask_user、human_input 或 approval_required 的替代品",
         "不要在 review-only 请求中编辑文件",
         "不要自行提交、推送或执行破坏性 git 命令",
-        "不要为了自举而把所有 examples 内容复制进 SKILL.md",
+        "不要把 git 安全边界或禁用命令写成单独工具声明；应写入 safety_policy",
     ],
     approval_required=[
         "目标文件不明确或会修改多个文件",
@@ -398,12 +337,11 @@ quality_bar(
         "contract 只使用 references/contract.pyi 中存在的函数和参数",
         "required inputs、required outputs、workflow/modes 和 validation 互相可追踪",
         "resources 声明每个 reference 的用途和加载时机",
-        "自举模式能说明如何审查和改写本 SKILL.md 自身",
-        "写入前必须经过 choose_density 和 compress_contract，避免简单 Skill 膨胀",
+        "写入前必须经过 run_semantic_review 和 apply_occams_razor，避免简单 Skill 膨胀",
         "语义审查必须覆盖 review_dimensions 中定义的品味审查规则",
     ],
     should=[
-        "简单 Skill 只使用 workflow、decision_rules、quality_bar 和 validation",
+        "简单 Skill 只使用 workflow、轻量 decision_rules、safety_policy、quality_bar 和 validation",
         "复杂控制流按需加载 examples/*.md",
         "主 SKILL.md 保持紧凑，复杂语法放入 examples/*.md",
         "中文 Skill 使用中文说明，除函数名、文件名、工具名和稳定字面量外不混用英文",
@@ -419,7 +357,7 @@ quality_bar(
 review_dimensions([
     "一致性：frontmatter、activate_when、do_not_activate_when、modes、workflow、resources 和 examples 不得互相冲突；同一行为只能有一个权威表达位置。",
     "可执行清晰度：Agent 读完 contract 后必须知道下一步读什么、问什么、运行什么、写什么；不得出现多条同级路径但没有选择规则。",
-    "简洁密度：简单脚本型 Skill 不得套用 full 模板；同一规则不得在 modes、decision_rules、failure_modes、quality_bar、validation 或 examples 中重复展开。",
+    "简洁密度：简单脚本型 Skill 不得套用复杂模板；同一规则不得在 modes、decision_rules、failure_modes、quality_bar、validation 或 examples 中重复展开。",
     "接口完整性：required inputs/outputs、script/reference/tool/call marker、用户审批点和失败路径必须能追踪到具体步骤或验证项。",
     "引导强度：关键边界必须写成明确禁止、优先级或选择规则；不得依赖弱提示、泛泛价值判断或让 Agent 自行补全隐含流程。",
     "用户参与可见性：需要询问用户、征求同意、等待人工审查或真实外部执行时，必须在结构化参数或具体自然语言调用点中显式出现。",
@@ -429,13 +367,13 @@ review_dimensions([
 
 validation(
     [
-        check("mechanical_python_contract_valid", "机械检查：contract.pyi、SKILL.md 和 examples/*.md 可被 AST 解析，且主 contract 只使用 contract.pyi 中存在的 DSL API。"),
+        check("mechanical_python_contract_valid", "机械检查：contract.pyi、SKILL.md 和 examples/*.md 可被 AST 解析，且主 contract 只使用 contract.pyi 中存在的 DSL API；ok=true 只表示没有 hard mechanical errors。"),
         check("mechanical_identity_and_resources_valid", "机械检查：主 contract 恰好一个 skill(...)，frontmatter name 与 skill(name=...) 一致，声明的 resources 路径存在。"),
         check("mechanical_call_markers_valid", "机械检查：call_* marker 只出现在自然语言 f-string 中，并包含具体 how。"),
         check("semantic_trigger_boundary_valid", "语义审查：frontmatter description 不宽于 activate_when，且不与 do_not_activate_when 冲突。"),
-        check("semantic_density_and_compression_valid", "语义审查：按 compact/full 选择密度，写入前执行 compress_contract，且 modes、safety_policy、quality_bar、decision_rules、failure_modes、examples 不重复表达同一规则。"),
+        check("semantic_occams_razor_applied", "语义审查：run_semantic_review 后执行 apply_occams_razor，删除重复冗余内容，但保留消除用户可见选择歧义的轻量 decision_rules。"),
         check("semantic_interface_and_behavior_closed", "语义审查：required inputs/outputs 被 workflow 或 modes 消费/产出，所有分支、循环、图工作流和状态机都有输出、停止条件或用户问题。"),
-        check("semantic_user_gates_preserved", "语义审查：结构化用户输入闸门不被 call_human 替代，contract-only 约束只在 self_bootstrap 或用户明确要求时启用。"),
+        check("semantic_user_gates_preserved", "语义审查：结构化用户输入闸门不被 call_human 替代，contract-only 约束只在用户明确要求时启用。"),
         check("semantic_taste_review", "语义审查：review_dimensions 中每个品味维度都被检查，finding 必须说明违反的维度、证据和 Agent 影响。"),
     ],
     on_failure="report",
@@ -668,8 +606,8 @@ examples([
         output="review_notes",
     ),
     example(
-        user="让 create-dsl-skills 完全自举，并改成中文",
-        expected_behavior="选择 self_bootstrap 模式，把本 SKILL.md 正文收敛为中文 Python DSL contract，并报告验证证据。",
+        user="把 create-dsl-skills 自己也重写一下",
+        expected_behavior="选择 rewrite 模式，把本 SKILL.md 当作普通目标 Skill 处理，并报告验证证据。",
         input_files=["skills/productivity/create-dsl-skills/SKILL.md"],
         output="skill_markdown",
     ),

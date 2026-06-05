@@ -18,14 +18,15 @@ from typing import Literal, TypeAlias
 # interactions.
 # These markers do not execute anything; they make the intended call auditable.
 # They do not replace structured control-flow gates such as ask_when_missing,
-# ask_user, ask_when_uncertain, failure_policy="ask_user",
-# approval_required, or validation(on_failure="ask_user").
+# ask_user, required_when, mode-level inputs/outputs, or
+# failure_policy="ask_user".
 #
 # Minimal complete contract:
 # - exactly one skill(...)
 # - at least one activate_when(...)
 # - do_not_activate_when(...) unless the skill has no meaningful neighbor
-# - inputs(...) and outputs(...)
+# - top-level inputs(...) and outputs(...), or mode-level inputs/outputs on
+#   every mode when modes(...) is the behavior surface
 # - one behavior declaration: workflow(...), workflow_graph(...), modes(...),
 #   loop(...), map_each(...), or decision_rules(...) plus workflow(...)
 #
@@ -55,11 +56,6 @@ class Path(Text): ...
 class File(Path): ...
 class Directory(Path): ...
 class URL(Text): ...
-class Command(Text): ...
-class Tool(Text): ...
-class Script(Path): ...
-class Reference(Path): ...
-class Asset(Path): ...
 class CallMarker(str): ...
 
 # ---------------------------------------------------------------------------
@@ -80,7 +76,6 @@ class StopSpec: ...
 class LoopSpec: ...
 class MapSpec: ...
 class ModeSpec: ...
-class CheckSpec: ...
 class ExampleSpec: ...
 
 
@@ -112,12 +107,8 @@ def skill(
     *,
     name: str,
     purpose: str,
-    summary: str | None = None,
-    version: str | None = None,
-    owner: str | None = None,
-    tags: list[str] | None = None,
 ) -> None:
-    """Required exactly once. Declares the skill identity, reusable capability, and optional catalog metadata."""
+    """Required exactly once. Declares the skill identity and reusable capability."""
     ...
 
 
@@ -209,7 +200,6 @@ def resources(
 def script(
     path: str,
     *,
-    purpose: str | None = None,
     when: str | None = None,
     interface: str | None = None,
     run_help_first: bool = False,
@@ -224,10 +214,8 @@ def script(
 def reference(
     path: str,
     *,
-    purpose: str | None = None,
     when: str | None = None,
     read_strategy: ReadStrategy = "on_demand",
-    grep_patterns: list[str] | None = None,
 ) -> ReferenceSpec:
     """Declares a reference file and when the agent should read it."""
     ...
@@ -236,9 +224,7 @@ def reference(
 def asset(
     path: str,
     *,
-    purpose: str | None = None,
     when: str | None = None,
-    copy_policy: Literal["copy_when_needed", "reference_only"] = "copy_when_needed",
 ) -> AssetSpec:
     """Declares a static asset used by skill outputs."""
     ...
@@ -259,12 +245,12 @@ def environment(
 def env(
     name: str,
     *,
+    when: str | None = None,
     default: str | None = None,
     required: bool = False,
     secret: bool = False,
-    purpose: str | None = None,
 ) -> EnvSpec:
-    """Declares one environment variable. Mark secrets explicitly."""
+    """Declares one environment variable and when it matters. Mark secrets explicitly."""
     ...
 
 
@@ -496,30 +482,18 @@ def mode(
     *,
     trigger: str,
     workflow: str | list[StepSpec],
+    inputs: list[InputSpec] | None = None,
+    outputs: list[OutputSpec] | None = None,
     description: str | None = None,
     prerequisites: list[str] | None = None,
     forbidden: list[str] | None = None,
 ) -> ModeSpec:
-    """Declares one operating mode and the trigger that selects it."""
+    """Declares one operating mode, the trigger that selects it, and any mode-specific interface."""
     ...
 
 
 # ---------------------------------------------------------------------------
-# Safety
-# ---------------------------------------------------------------------------
-
-def safety_policy(
-    *,
-    must: list[str] | None = None,
-    must_not: list[str] | None = None,
-    approval_required: list[str] | None = None,
-) -> None:
-    """Declares safety constraints that govern all workflow paths. approval_required lists formal approval gates."""
-    ...
-
-
-# ---------------------------------------------------------------------------
-# Quality, validation, and examples
+# Quality and examples
 # ---------------------------------------------------------------------------
 
 def quality_bar(
@@ -529,26 +503,6 @@ def quality_bar(
     must_not: list[str] | None = None,
 ) -> None:
     """Declares observable quality criteria for the final result."""
-    ...
-
-
-def validation(
-    checks: list[CheckSpec],
-    *,
-    on_failure: Literal["report", "repair", "ask_user", "stop"] = "report",
-) -> None:
-    """Declares validation actions or checks. on_failure='ask_user' is a formal validation-failure gate."""
-    ...
-
-
-def check(
-    id: str,
-    description: str,
-    *,
-    command: str | None = None,
-    expected: str | None = None,
-) -> CheckSpec:
-    """Declares one validation check. command is optional."""
     ...
 
 
@@ -567,11 +521,4 @@ def example(
     output: str | None = None,
 ) -> ExampleSpec:
     """One user prompt and expected skill behavior."""
-    ...
-
-
-def review_dimensions(
-    dimensions: list[str],
-) -> None:
-    """Declares dimensions a reviewer should inspect."""
     ...

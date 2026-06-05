@@ -8,7 +8,6 @@ from skill_contract import *
 skill(
     name="lark-notify",
     purpose="Send a Lark notification through the bundled CLI after the user has authorized the send.",
-    summary="Compact CLI-backed notification skill.",
 )
 
 activate_when([
@@ -41,7 +40,6 @@ resources(
     scripts=[
         script(
             "scripts/cli.py",
-            purpose="Send or dry-run a Lark notification.",
             interface="python3 skills/lark-notify/scripts/cli.py send --message <text> --webhook <url>",
             run_help_first=True,
         ),
@@ -49,7 +47,6 @@ resources(
     references=[
         reference(
             "references/lark-webhook.md",
-            purpose="Webhook payload rules, configured destinations, and safety notes.",
             when="before constructing or sending a real payload",
         ),
     ],
@@ -92,32 +89,17 @@ workflow([
     ),
 ])
 
-safety_policy(
+quality_bar(
     must=[
-        "Require explicit user authorization before any real webhook send.",
+        "Contract stays lightweight: no teaching examples or custom review rules unless the user asks for them.",
+        "decision_rules only describe user-visible CLI choices such as dry-run/send and payload style.",
+        "Script target is skill-relative; call_script how explains the host-root command when needed.",
+        "Real external sends have an explicit authorization input and a concrete workflow gate.",
         "Use dry-run or help commands before real send when the CLI interface is uncertain.",
     ],
     must_not=[
         "Do not send a real notification from a draft-only request.",
         "Do not retry failed real sends without user approval.",
     ],
-    approval_required=["send a real webhook notification"],
-)
-
-quality_bar(
-    must=[
-        "Contract stays lightweight: no teaching examples or review_dimensions unless the user asks for them.",
-        "decision_rules only describe user-visible CLI choices such as dry-run/send and payload style.",
-        "Script target is skill-relative; call_script how explains the host-root command when needed.",
-        "Real external sends have an explicit authorization input and safety_policy approval boundary.",
-    ],
-)
-
-validation(
-    [
-        check("cli_help_available", "CLI help can be inspected before send.", command="python3 skills/lark-notify/scripts/cli.py --help"),
-        check("authorization_required", "send_notification requires send_authorization before real send."),
-    ],
-    on_failure="report",
 )
 ```

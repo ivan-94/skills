@@ -1,6 +1,6 @@
 # Resources And Calls Example
 
-Use this when the skill declares bundled scripts, references, assets, environment assumptions, embedded call markers, subagent delegation, validation, and checks.
+Use this when the skill declares bundled scripts, references, assets, environment assumptions, embedded call markers, subagent delegation, and mechanical verification steps.
 
 `call_script(target, ...)` uses a skill-relative `target` such as `scripts/render_docx.py`. If the real command must run from the host project root, describe that command in `how`; do not put host-root paths in `target`.
 
@@ -9,7 +9,6 @@ resources(
     scripts=[
         script(
             "scripts/render_docx.py",
-            purpose="Render a docx into page images for visual review.",
             when="validating generated documents",
             interface="python scripts/render_docx.py <input.docx> --out <dir>",
             run_help_first=True,
@@ -21,26 +20,22 @@ resources(
     references=[
         reference(
             "references/layout-rubric.md",
-            purpose="Detailed visual review rubric.",
             when="layout quality matters",
             read_strategy="on_demand",
-            grep_patterns=["overflow", "page break", "table"],
         ),
     ],
     assets=[
         asset(
             "assets/report-template.docx",
-            purpose="Base template for generated reports.",
             when="creating a new report document",
-            copy_policy="copy_when_needed",
         ),
     ],
 )
 
 environment(
     variables=[
-        env("DOC_RENDERER", default="python scripts/render_docx.py", purpose="Document render helper."),
-        env("OPENAI_API_KEY", required=False, secret=True, purpose="Only needed for explicit API-backed fallback."),
+        env("DOC_RENDERER", when="rendering document pages", default="python scripts/render_docx.py"),
+        env("OPENAI_API_KEY", when="explicit API-backed fallback is requested", required=False, secret=True),
     ],
     commands=["python3", "rg"],
     dependencies=["python-docx"],
@@ -49,6 +44,18 @@ environment(
 )
 
 workflow([
+    step(
+        "inspect_renderer",
+        f"""
+        Inspect the renderer interface before relying on it.
+        Use {call_script(
+            "scripts/render_docx.py",
+            how="from the skill directory, run python scripts/render_docx.py --help and confirm it accepts an input docx and --out directory",
+            expect="usage text exits successfully",
+            on_failure="report that the renderer interface could not be verified",
+        )}.
+        """,
+    ),
     step(
         "render_pages",
         f"""
@@ -90,19 +97,13 @@ workflow([
     ),
 ])
 
-safety_policy(
-    must_not=["Do not run destructive filesystem commands unless the user explicitly requested them."],
-)
-
-validation(
-    [
-        check(
-            "script_help",
-            "Render script exposes a useful help interface.",
-            command="python scripts/render_docx.py --help",
-            expected="prints usage and exits successfully",
-        ),
+quality_bar(
+    must=[
+        "Script help or an equivalent interface check is performed before relying on the renderer.",
+        "Mechanical verification evidence is reported separately from the visual quality judgment.",
     ],
-    on_failure="report",
+    must_not=[
+        "Do not run destructive filesystem commands unless the user explicitly requested them.",
+    ],
 )
 ```

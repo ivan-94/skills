@@ -191,6 +191,44 @@ def required_names_from_call(node: ast.Call) -> list[str]:
     return names
 
 
+def input_names_from_list(node: ast.AST | None) -> list[str]:
+    names: list[str] = []
+    if not isinstance(node, ast.List | ast.Tuple):
+        return names
+    for item in node.elts:
+        value = literal_string(item)
+        if value is not None:
+            names.append(value)
+            continue
+        if not isinstance(item, ast.Call) or call_name(item) != "input" or not item.args:
+            continue
+        required_node = keyword_value(item, "required")
+        required = literal_bool(required_node) if required_node is not None else True
+        if required is False:
+            continue
+        value = literal_string(item.args[0])
+        if value is not None:
+            names.append(value)
+    return names
+
+
+def output_names_from_list(node: ast.AST | None) -> list[str]:
+    names: list[str] = []
+    if not isinstance(node, ast.List | ast.Tuple):
+        return names
+    for item in node.elts:
+        value = literal_string(item)
+        if value is not None:
+            names.append(value)
+            continue
+        if not isinstance(item, ast.Call) or call_name(item) != "output" or not item.args:
+            continue
+        value = literal_string(item.args[0])
+        if value is not None:
+            names.append(value)
+    return names
+
+
 def values_from_keyword_lists(tree: ast.AST, keyword_names: set[str]) -> set[str]:
     values: set[str] = set()
     for node in ast.walk(tree):
@@ -314,14 +352,28 @@ def validate_conditional_inputs(tree: ast.AST, filename: str) -> list[dict[str, 
     return findings
 
 
+def all_modes_have_interface(tree: ast.AST, keyword_name: str) -> bool:
+    mode_calls = calls_named(tree, "mode")
+    if not mode_calls:
+        return False
+    for node in mode_calls:
+        value = keyword_value(node, keyword_name)
+        if not isinstance(value, ast.List | ast.Tuple) or not value.elts:
+            return False
+    return True
+
+
 def validate_required_structure(tree: ast.AST, markdown: str, filename: str) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     skill_calls = calls_named(tree, "skill")
     if len(skill_calls) != 1:
         findings.append(finding("error", filename, f"expected exactly one skill(...) call, found {len(skill_calls)}"))
-    for name in ("activate_when", "inputs", "outputs"):
-        if not calls_named(tree, name):
-            findings.append(finding("error", filename, f"missing required {name}(...) declaration"))
+    if not calls_named(tree, "activate_when"):
+        findings.append(finding("error", filename, "missing required activate_when(...) declaration"))
+    if not calls_named(tree, "inputs") and not all_modes_have_interface(tree, "inputs"):
+        findings.append(finding("error", filename, "missing inputs interface: declare inputs(...) or inputs=[...] on every mode"))
+    if not calls_named(tree, "outputs") and not all_modes_have_interface(tree, "outputs"):
+        findings.append(finding("error", filename, "missing outputs interface: declare outputs(...) or outputs=[...] on every mode"))
     if not any(calls_named(tree, name) for name in BEHAVIOR_DECLARATIONS):
         findings.append(
             finding("error", filename, "missing behavior declaration: workflow, workflow_graph, modes, loop, or map_each")
@@ -344,6 +396,9 @@ def validate_required_io_traceability(tree: ast.AST, filename: str) -> list[dict
         input_names.extend(required_names_from_call(node))
     for node in calls_named(tree, "outputs"):
         output_names.extend(required_names_from_call(node))
+    for node in calls_named(tree, "mode"):
+        input_names.extend(input_names_from_list(keyword_value(node, "inputs")))
+        output_names.extend(output_names_from_list(keyword_value(node, "outputs")))
     consumed = values_from_keyword_lists(tree, {"reads"})
     produced = values_from_keyword_lists(tree, {"writes"})
     for name in sorted(set(input_names) - consumed):

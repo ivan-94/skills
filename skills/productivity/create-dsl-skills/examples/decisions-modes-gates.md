@@ -1,4 +1,4 @@
-# Decisions, Modes, And Safety Example
+# Decisions, Modes, And Gates Example
 
 Use this when the skill has explicit branch rules, top-level modes, fallback behavior, or approval boundaries.
 
@@ -31,17 +31,30 @@ modes(
         mode(
             "review",
             trigger="user asks for critique or audit",
+            inputs=[
+                input("target_skill", type=File | Directory | Text, description="Skill artifact to inspect."),
+            ],
+            outputs=[
+                output("review_report", type=Text, description="Read-only findings with evidence."),
+            ],
             workflow=[
-                step("inspect", "Read the target skill and references."),
-                step("report", "Return findings without editing files."),
+                step("inspect", "Read the target skill and references.", reads=["target_skill"]),
+                step("report", "Return findings without editing files.", writes=["review_report"]),
             ],
             description="Read-only review mode.",
         ),
         mode(
             "rewrite",
             trigger="user explicitly asks to rewrite or patch the skill",
+            inputs=[
+                input("target_skill", type=File | Directory | Text, description="Skill artifact to rewrite."),
+                input("rewrite_approval", type=Text, description="Explicit user approval to overwrite the target skill."),
+            ],
+            outputs=[
+                output("skill_patch", type=Text, description="Patch or rewritten contract."),
+            ],
             workflow=[
-                step("inspect", "Read the target skill and references."),
+                step("inspect", "Read the target skill and references.", reads=["target_skill"]),
                 step(
                     "confirm_edit",
                     f"""
@@ -54,8 +67,9 @@ modes(
                     )}.
                     """,
                     ask_user="Confirm whether to overwrite the target skill after reviewing the planned changes.",
+                    writes=["rewrite_approval"],
                 ),
-                step("patch", "Rewrite the contract and prose after approval."),
+                step("patch", "Rewrite the contract and prose after approval.", reads=["rewrite_approval"], writes=["skill_patch"]),
             ],
             prerequisites=["write access to the target file"],
             forbidden=["silent scope expansion"],
@@ -65,16 +79,15 @@ modes(
     selection="Do not switch from review to rewrite unless the user requested edits.",
 )
 
-safety_policy(
-    must=["State when review is read-only."],
-    must_not=["Do not edit files during review-only mode."],
-    approval_required=["overwrite an existing skill", "delete a generated artifact"],
-)
-
-validation(
-    [
-        check("planned_changes_clear", "The planned file changes are specific enough for the user to approve or reject."),
+quality_bar(
+    must=[
+        "State when review is read-only.",
+        "Planned file changes are specific enough for the user to approve or reject.",
+        "Overwrite or delete actions are represented by concrete ask_user or call_human gates.",
     ],
-    on_failure="ask_user",
+    must_not=[
+        "Do not edit files during review-only mode.",
+        "Do not overwrite an existing skill or delete a generated artifact without explicit approval.",
+    ],
 )
 ```

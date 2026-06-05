@@ -1,6 +1,6 @@
 # Human Review And Review Vocabulary Example
 
-Use this when humans must approve a draft, another skill is involved, or reports need defined review dimensions.
+Use this when humans must approve a draft, another skill is involved, or reports need explicit review criteria.
 
 ```python
 modes(
@@ -51,23 +51,19 @@ workflow([
     ),
 ])
 
-review_dimensions([
-    "activation quality",
-    "input and output clarity",
-    "workflow executability",
-    "resource and call-marker clarity",
-    "failure and approval paths",
-])
-
-validation(
-    [
-        check("frontmatter_not_too_broad", "frontmatter description is no broader than activate_when."),
-        check("required_outputs_written", "all required outputs are written by workflow steps or nodes."),
-        check("call_markers_have_how", "all call_* markers include how."),
-        check("formal_human_gates_structured", "formal human approval points use structured gates and call_human only when the concrete question appears in prose."),
-        check("graph_edges_valid", "all graph edges reference existing nodes."),
-        check("loops_terminate", "all loops have termination conditions."),
+quality_bar(
+    must=[
+        "Review covers activation quality.",
+        "Review covers input and output clarity.",
+        "Review covers workflow executability.",
+        "Review covers resource and call-marker clarity.",
+        "Review covers failure and approval paths.",
+        "frontmatter description is no broader than activate_when.",
+        "all required outputs are written by workflow steps, nodes, or mode outputs.",
+        "all call_* markers include how.",
+        "formal human approval points use structured gates and call_human only when the concrete question appears in prose.",
+        "all graph edges reference existing nodes.",
+        "all loops have termination conditions.",
     ],
-    on_failure="report",
 )
 ```

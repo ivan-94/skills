@@ -6,7 +6,6 @@ Use this when a DSL-backed Skill needs a frontmatter `description` that triggers
 skill(
     name="repo-release",
     purpose="Guide an agent through preparing and verifying a repository release.",
-    summary="Release preparation skill with explicit trigger boundaries.",
 )
 
 activate_when([
@@ -33,8 +32,4 @@ quality_bar(
         "Do not use generic wording such as helps with, improves workflow, or useful for agents without concrete triggers.",
     ],
 )
-
-validation([
-    check("description_matches_activation", "frontmatter description is no broader than activate_when and does not conflict with do_not_activate_when."),
-])
 ```

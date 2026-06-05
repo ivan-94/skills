@@ -75,6 +75,10 @@ resources(
             when="Skill 需要把有边界的工作委托给子 Agent 并保留可审计交付路径",
         ),
         reference(
+            "examples/multi-agent-orchestration.md",
+            when="Skill 需要声明多个稳定 Agent 角色、权限边界、上下文边界、actor 步骤或父 Agent 仲裁",
+        ),
+        reference(
             "examples/human-review-vocabulary.md",
             when="Skill 需要人工审查、委托其他 Skill 或定义审查规则",
         ),
@@ -96,6 +100,7 @@ TASTE_RULES = [
     "用户参与可见性：需要询问用户、征求同意、等待人工审查或真实外部执行时，必须在结构化参数或具体自然语言调用点中显式出现。",
     "结构合法性：主 SKILL.md 只承载核心 contract 和核心例子；复杂语法放入按需 examples，Markdown prose 不得在 contract 外新增行为。",
     "开闭原则: 只对 Agent 暴露公开接口，隐藏内部实现细节、开发者信息; 不要直接调用其他 Skills 的内部实现细节，而是使用 call_skill 委托调用。",
+    "多 Agent 边界：稳定角色用 agents/agent 声明职责、context、effort、permissions 和 forbidden；真实委托点再用 call_subagent，不要把角色契约埋在散落 prose 中。",
 ]
 
 workflow(
@@ -217,6 +222,7 @@ decision_rules([
     when("Skill 需要教学型示例、审查规则、多 mode、复杂图工作流或跨 Skill 委托", then="保留必要高级结构，但仍在语义审查后执行奥卡姆剃刀"),
     when("任务主要是线性创建或改写", then="使用 workflow 或 mode 内联 workflow 表达，不要引入 workflow_graph"),
     when("任务需要 DAG、并行、join 或非线性终止", then="读取 examples/graph-workflow.md 并使用 workflow_graph"),
+    when("任务需要稳定多 Agent 职责、上下文边界、权限边界或父 Agent 仲裁", then="读取 examples/multi-agent-orchestration.md，并使用 agents、agent、agent_permissions 和 step(actor=...)；只在真实委托点使用 call_subagent"),
     when("任务需要持续人工审查、批准或生命周期边界", then="读取 examples/human-review-vocabulary.md 并使用 modes、workflow、call_human 和 quality_bar"),
     when("任务需要重复评估多个 case", then="读取 examples/iteration-aggregation.md 并使用 loop 或 map_each；聚合结果用后续 step 表达"),
     when("Skill 是 CLI-backed 轻量形态", then="读取 examples/cli-backed-skill.md，不套用复杂审查或教学模板"),
@@ -245,6 +251,7 @@ quality_bar(
         "机械校验结果必须单独写入 mechanical_validation_evidence，不得替代语义审查",
         "修改现有 Skill 时必须说明保留、删除和新增的行为边界",
         "结构化用户输入闸门必须使用 ask_user、required_when、mode inputs 或 failure_policy='ask_user' 等固定参数表达",
+        "多 Agent Skill 必须用 agents/agent 声明稳定角色，并用 step(actor=...) 标明步骤 owner",
     ] + TASTE_RULES,
     should=[
         "简单 Skill 只使用 workflow、轻量 decision_rules 和 quality_bar",

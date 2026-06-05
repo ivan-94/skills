@@ -2,6 +2,7 @@
   "name": "mattpocock-skills",
   "skills": [
     "./skills/engineering/ask-matt",
+    "./skills/engineering/adversarial-ui-review-loop",
     "./skills/engineering/agent-context-audit",
     "./skills/engineering/create-pr",
     "./skills/engineering/cross-review",
@@ -23,6 +24,7 @@
     "./skills/engineering/setup-matt-pocock-skills",
     "./skills/engineering/tdd",
     "./skills/engineering/triage",
+    "./skills/engineering/visual-fidelity-loop",
     "./skills/engineering/to-issues",
     "./skills/engineering/to-prd",
     "./skills/engineering/domain-modeling",

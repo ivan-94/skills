@@ -20,6 +20,7 @@ Reachable only when you type them (`disable-model-invocation: true`).
 Model- or user-reachable (rich trigger phrasing so the model can reach for them).
 
 - **[agent-context-audit](./agent-context-audit/SKILL.md)** — 审计新 Agent 会话的上下文来源、指令冲突、运行/测试认知、HAT 引导和交接规则。
+- **[adversarial-ui-review-loop](./adversarial-ui-review-loop/SKILL.md)** — 对没有明确设计稿参照的前端 UI 做对抗式审美审查和修复循环。
 - **[create-pr](./create-pr/SKILL.md)** — Create or update a GitHub PR with issue linkage, TDD/test evidence, existing HAT results, and reviewer-facing delivery notes.
 - **[cross-review](./cross-review/SKILL.md)** — Invoke the opposite CLI for a read-only independent code review: Codex calls Claude Code, Claude Code calls Codex, with P0/P1/P2 findings and no P3 noise.
 - **[deliver-issue](./deliver-issue/SKILL.md)** — Deliver GitHub issues through TDD, cross-review, HAT preparation, and a Draft PR labeled `HAT-Ready`.
@@ -31,6 +32,7 @@ Model- or user-reachable (rich trigger phrasing so the model can reach for them)
 - **[hat-prepare](./hat-prepare/SKILL.md)** — Prepare HAT (hand acceptance testing) after TDD by generating an environment guide, acceptance checklist, data needs, and an idempotent `prepare.sh`.
 - **[hat-run](./hat-run/SKILL.md)** — Run an existing HAT guide by checking the prepared environment, executing automatable acceptance steps, and writing reports with evidence.
 - **[hat-frontend-friendly](./hat-frontend-friendly/SKILL.md)** — Add a `window.__hat` frontend control surface so HAT/browser agents can use discoverable business actions instead of brittle component DOM clicks.
+- **[visual-fidelity-loop](./visual-fidelity-loop/SKILL.md)** — 使用设计稿、Figma、截图或参考图进行 UI 视觉还原和设计系统化。
 - **[merge-pr](./merge-pr/SKILL.md)** — Merge a ready GitHub PR through `gh` CLI with isolated worktrees, conservative conflict handling, required tests, merge queue support, and post-merge target-branch verification.
 - **[setup-agent-runtime](./setup-agent-runtime/SKILL.md)** — Set up an Agent Runtime for Compose/devcontainer projects, with isolated worktrees, dynamic ports, project-local sandbox CLI, docs, and cleanup-safe validation.
 - **[setup-agent-workflows](./setup-agent-workflows/SKILL.md)** — Set up optional project-level workflow maps and Source Manifest handoff rules for long-running or multi-agent engineering work.

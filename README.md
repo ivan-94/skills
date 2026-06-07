@@ -173,6 +173,7 @@ Skills I use daily for code work.
 - **[hat-prepare](./skills/engineering/hat-prepare/SKILL.md)** — Prepare HAT (hand acceptance testing) after TDD by generating an environment guide, acceptance checklist, data needs, and an idempotent `prepare.sh`.
 - **[hat-run](./skills/engineering/hat-run/SKILL.md)** — Run an existing HAT guide by checking the prepared environment, executing automatable acceptance steps, and writing reports with evidence.
 - **[hat-frontend-friendly](./skills/engineering/hat-frontend-friendly/SKILL.md)** — Add a `window.__hat` frontend control surface so HAT/browser agents can use discoverable business actions instead of brittle component DOM clicks.
+- **[migrate-frontend-i18n](./skills/engineering/migrate-frontend-i18n/SKILL.md)** — 编排大型前端项目 i18n 迁移：方案确认、详细规划、多智能体切片实施、视觉/文案验收和规范沉淀。
 - **[visual-fidelity-loop](./skills/engineering/visual-fidelity-loop/SKILL.md)** — 使用设计稿、Figma、截图或参考图进行 UI 视觉还原和设计系统化。
 - **[merge-pr](./skills/engineering/merge-pr/SKILL.md)** — Merge a ready GitHub PR through `gh` CLI with isolated worktrees, conservative conflict handling, required tests, merge queue support, and post-merge target-branch verification.
 - **[setup-agent-runtime](./skills/engineering/setup-agent-runtime/SKILL.md)** — Set up an Agent Runtime for Compose/devcontainer projects, with isolated worktrees, dynamic ports, project-local sandbox CLI, docs, and cleanup-safe validation.

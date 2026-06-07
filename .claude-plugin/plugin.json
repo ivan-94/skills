@@ -14,6 +14,7 @@
     "./skills/engineering/hat-copilot",
     "./skills/engineering/hat-dispatch",
     "./skills/engineering/hat-frontend-friendly",
+    "./skills/engineering/migrate-frontend-i18n",
     "./skills/engineering/hat-prepare",
     "./skills/engineering/hat-run",
     "./skills/engineering/improve-codebase-architecture",

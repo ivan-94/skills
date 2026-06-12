@@ -197,6 +197,7 @@ General workflow tools, not code-specific.
 **Model-invoked**
 
 - **[brainstorming](./skills/productivity/brainstorming/SKILL.md)** — Explore user intent, requirements, and design before implementation.
+- **[codex-session-manager](./skills/productivity/codex-session-manager/SKILL.md)** — 自动整理 Codex App 会话：全局重命名、置顶、取消置顶、归档并输出运行报告。
 - **[create-dsl-skills](./skills/productivity/create-dsl-skills/SKILL.md)** — Write or rewrite skills using a formal Python Skill Contract DSL and its `contract.pyi` spec.
 - **[grilling](./skills/productivity/grilling/SKILL.md)** — Interview the user relentlessly about a plan or design until every branch of the decision tree is resolved. The reusable loop behind `grill-me` and `grill-with-docs`.
 
